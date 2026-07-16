@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --background: #F5F8F6;
+  --card: #FFFFFF;
+  --primary: #1F9D55;
+  --secondary: #2ECC71;
+  --border: #DCE7E1;
+  --text: #111827;
+  --muted: #6B7280;
+}
+
+.dark {
+  --background: #07120D;
+  --card: #0D1B15;
+  --primary: #2ECC71;
+  --secondary: #1F9D55;
+  --border: #1E3528;
+  --text: #F4F4F4;
+  --muted: #9CB4A5;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Glassmorphism Classes */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+}
+
+.dark .glass-card {
+  background: rgba(13, 27, 21, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom animations */
+.glow-effect {
+  position: relative;
+}
+.glow-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.glow-effect:hover::after {
+  opacity: 1;
+}
+
+/* Premium gradient backgrounds */
+.hero-gradient {
+  background: radial-gradient(circle at 50% -20%, rgba(46, 204, 113, 0.15) 0%, rgba(7, 18, 13, 0) 60%);
+}
+
+.light .hero-gradient {
+  background: radial-gradient(circle at 50% -20%, rgba(31, 157, 85, 0.08) 0%, rgba(245, 248, 246, 0) 65%);
+}
+
+/* Sidebar transitions */
+.sidebar-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
