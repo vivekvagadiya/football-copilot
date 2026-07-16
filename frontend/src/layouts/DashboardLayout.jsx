@@ -13,6 +13,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { SearchModal } from '../components/ui/Search';
 import { Drawer } from '../components/ui/Drawer';
 import { toast } from 'sonner';
+import { logoutApi } from '../api/auth.api';
 
 export const DashboardLayout = () => {
   const { theme, toggleTheme, user, logout, notifications, isSearchOpen, setIsSearchOpen } = useApp();
@@ -36,10 +37,16 @@ export const DashboardLayout = () => {
     { name: 'Notifications', path: '/notifications', icon: Bell, alertCount: notifications.filter(n => !n.read).length }
   ];
 
-  const handleLogout = () => {
-    logout();
-    toast.success('Logged out successfully');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch (err) {
+      console.error("Logout API error:", err);
+    } finally {
+      logout();
+      toast.success('Logged out successfully');
+      navigate('/');
+    }
   };
 
   const currentActiveItem = menuItems.find(item => location.pathname.startsWith(item.path)) || { name: 'Football Copilot' };

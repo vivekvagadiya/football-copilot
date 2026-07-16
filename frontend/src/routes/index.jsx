@@ -1,5 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { tokenService } from '../api/tokenService';
+import { useApp } from '../context/AppContext';
 
 // Layouts
 import PublicLayout from '../layouts/PublicLayout';
@@ -28,18 +30,41 @@ import Settings from '../pages/core/Settings';
 import AIChat from '../pages/ai/AIChat';
 import NotFound from '../pages/core/NotFound';
 
+// Route Guards
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = !!tokenService.getAccessToken();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+const GuestRoute = ({ children }) => {
+  const isAuthenticated = !!tokenService.getAccessToken();
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+};
+
 export const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        } />
+        <Route path="/register" element={
+          <GuestRoute>
+            <RegisterPage />
+          </GuestRoute>
+        } />
       </Route>
 
       {/* Dashboard Routes */}
-      <Route element={<DashboardLayout />}>
+      <Route element={
+        <ProtectedRoute>
+          <DashboardLayout />
+        </ProtectedRoute>
+      }>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/live" element={<LiveMatches />} />
         <Route path="/fixtures" element={<Fixtures />} />

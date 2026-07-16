@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppRoutes } from './routes';
@@ -28,9 +28,9 @@ export const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <HashRouter>
+        <BrowserRouter>
           <AppContent />
-        </HashRouter>
+        </BrowserRouter>
       </AppProvider>
     </QueryClientProvider>
   );

@@ -1,17 +1,27 @@
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Cpu, Mail, Lock, ShieldAlert } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
-import { toast } from 'sonner';
+import React from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Cpu, Mail, Lock, ShieldAlert } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { Button } from "../../components/ui/Button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "../../components/ui/Card";
+import { toast } from "sonner";
+import { loginUser } from "../../api/auth.api";
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email credentials' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' })
+  email: z.string().email({ message: "Invalid email credentials" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" }),
 });
 
 export const LoginPage = () => {
@@ -21,30 +31,36 @@ export const LoginPage = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'gaffer@copilot.ai',
-      password: 'password123'
-    }
+      email: "",
+      password: "",
+    },
   });
 
   const onSubmit = async (data) => {
+    const payload = {
+      email: data.email,
+      password: data.password,
+    };
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      login({
-        username: data.email.split('@')[0],
-        email: data.email,
-        favoriteTeamId: 'arsenal',
-        favoriteLeagueId: 'pl',
-        notificationsEnabled: true
-      });
-      toast.success('Access Granted. Connecting FOS session.');
-      navigate('/dashboard');
+      const result = await loginUser(payload);
+      if (result?.data?.user) {
+        login(result.data.user);
+      } else {
+        login({
+          username: data.email.split("@")[0],
+          email: data.email,
+        });
+      }
+      toast.success(
+        result.message || "Access Granted. Connecting FOS session.",
+      );
+      navigate("/dashboard");
     } catch (err) {
-      toast.error('Authentication rejected.');
+      toast.error(err?.message || "Authentication rejected.");
     }
   };
 
@@ -55,19 +71,25 @@ export const LoginPage = () => {
           <div className="mx-auto p-2 bg-primary/10 rounded-lg w-fit text-primary border border-primary/20 mb-3">
             <Cpu size={24} />
           </div>
-          <CardTitle className="text-xl font-bold font-display">Access Football Copilot</CardTitle>
-          <CardDescription>Enter credentials to restore your operating system</CardDescription>
+          <CardTitle className="text-xl font-bold font-display">
+            Access Football Copilot
+          </CardTitle>
+          <CardDescription>
+            Enter credentials to restore your operating system
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Email Field */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted block">Session Email</label>
+              <label className="text-xs font-semibold text-muted block">
+                Session Email
+              </label>
               <div className="relative flex items-center border border-border rounded-lg px-3 bg-background/50 focus-within:ring-2 focus-within:ring-primary/45">
                 <Mail size={15} className="text-muted mr-2" />
                 <input
                   type="email"
-                  {...register('email')}
+                  {...register("email")}
                   placeholder="name@club.com"
                   className="w-full py-2 bg-transparent text-sm focus:outline-none"
                 />
@@ -81,12 +103,14 @@ export const LoginPage = () => {
 
             {/* Password Field */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted block">Access Token (Password)</label>
+              <label className="text-xs font-semibold text-muted block">
+                Access Token (Password)
+              </label>
               <div className="relative flex items-center border border-border rounded-lg px-3 bg-background/50 focus-within:ring-2 focus-within:ring-primary/45">
                 <Lock size={15} className="text-muted mr-2" />
                 <input
                   type="password"
-                  {...register('password')}
+                  {...register("password")}
                   placeholder="••••••••"
                   className="w-full py-2 bg-transparent text-sm focus:outline-none"
                 />
@@ -98,14 +122,21 @@ export const LoginPage = () => {
               )}
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
-              {isSubmitting ? 'Authenticating...' : 'Establish Session'}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full mt-2"
+            >
+              {isSubmitting ? "Authenticating..." : "Establish Session"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="justify-center text-xs text-muted">
           <span>First time here? </span>
-          <Link to="/register" className="text-primary hover:underline ml-1 font-semibold">
+          <Link
+            to="/register"
+            className="text-primary hover:underline ml-1 font-semibold"
+          >
             Register System Token
           </Link>
         </CardFooter>
