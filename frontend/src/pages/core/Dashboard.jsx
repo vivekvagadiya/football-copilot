@@ -5,13 +5,13 @@ import {
   Zap, Calendar, Award, Newspaper, ArrowRightLeft, 
   Cpu, Star, ArrowRight, User
 } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import { ScoreCard } from '../components/football/ScoreCard';
-import { FixtureCard } from '../components/football/FixtureCard';
-import { TransferCard } from '../components/football/TransferCard';
-import { Loading } from '../components/ui/Loading';
-import { Button } from '../components/ui/Button';
+import { apiService } from '../../services/apiService';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
+import { ScoreCard } from '../../components/football/ScoreCard';
+import { FixtureCard } from '../../components/football/FixtureCard';
+import { TransferCard } from '../../components/football/TransferCard';
+import { Loading } from '../../components/ui/Loading';
+import { Button } from '../../components/ui/Button';
 
 export const Dashboard = () => {
   const navigate = useNavigate();

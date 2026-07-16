@@ -1,9 +1,9 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Shield } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { TeamCard } from '../components/football/TeamCard';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { TeamCard } from '../../components/football/TeamCard';
 
 export const Teams = () => {
   const { data: teams = [], isLoading } = useQuery({

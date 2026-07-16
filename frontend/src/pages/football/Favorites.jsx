@@ -1,12 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Star, Shield, User } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { TeamCard } from '../components/football/TeamCard';
-import { PlayerCard } from '../components/football/PlayerCard';
+import { useApp } from '../../context/AppContext';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { TeamCard } from '../../components/football/TeamCard';
+import { PlayerCard } from '../../components/football/PlayerCard';
 
 export const Favorites = () => {
   const { favorites } = useApp();

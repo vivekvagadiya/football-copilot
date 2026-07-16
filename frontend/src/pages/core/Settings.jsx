@@ -1,9 +1,9 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Sun, Moon, Bell, Shield, Languages, Check } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
+import { useApp } from '../../context/AppContext';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
 
 export const Settings = () => {

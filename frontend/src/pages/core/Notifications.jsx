@@ -1,9 +1,9 @@
 import React from 'react';
 import { Bell, Trash2, CheckCheck } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { NotificationCard } from '../components/football/NotificationCard';
+import { useApp } from '../../context/AppContext';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { NotificationCard } from '../../components/football/NotificationCard';
 
 export const Notifications = () => {
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useApp();

@@ -3,14 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Info, Calendar, Users, BarChart2, Star } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Tabs } from '../components/ui/Tabs';
-import { Avatar } from '../components/ui/Avatar';
-import { Badge } from '../components/ui/Badge';
-import { FixtureCard } from '../components/football/FixtureCard';
-import { useApp } from '../context/AppContext';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Tabs } from '../../components/ui/Tabs';
+import { Avatar } from '../../components/ui/Avatar';
+import { Badge } from '../../components/ui/Badge';
+import { FixtureCard } from '../../components/football/FixtureCard';
+import { useApp } from '../../context/AppContext';
 
 export const TeamDetails = () => {
   const { id } = useParams();

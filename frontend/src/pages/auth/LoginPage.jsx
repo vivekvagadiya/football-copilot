@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Cpu, Mail, Lock, ShieldAlert } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { Button } from '../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
+import { useApp } from '../../context/AppContext';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({

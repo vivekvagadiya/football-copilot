@@ -3,13 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Calendar, Award, Compass, Star, TrendingUp, Sparkles } from 'lucide-react';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Avatar } from '../components/ui/Avatar';
-import { Badge } from '../components/ui/Badge';
-import { Tabs } from '../components/ui/Tabs';
-import { useApp } from '../context/AppContext';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Avatar } from '../../components/ui/Avatar';
+import { Badge } from '../../components/ui/Badge';
+import { Tabs } from '../../components/ui/Tabs';
+import { useApp } from '../../context/AppContext';
 
 export const PlayerProfile = () => {
   const { id } = useParams();

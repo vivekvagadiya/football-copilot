@@ -2,10 +2,10 @@ import React, { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import { ArrowRightLeft, UploadCloud, FileSpreadsheet } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { TransferCard } from '../components/football/TransferCard';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { TransferCard } from '../../components/football/TransferCard';
 import { toast } from 'sonner';
 
 export const Transfers = () => {

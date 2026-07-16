@@ -12,7 +12,7 @@ import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { SearchModal } from '../components/ui/Search';
 import { Drawer } from '../components/ui/Drawer';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 
 export const DashboardLayout = () => {
   const { theme, toggleTheme, user, logout, notifications, isSearchOpen, setIsSearchOpen } = useApp();
@@ -46,9 +46,6 @@ export const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-background text-text transition-colors duration-200 flex flex-col md:flex-row overflow-x-hidden">
-      {/* Sonner Toast alerts */}
-      <Toaster position="top-right" theme={theme} />
-
       {/* Search Command Modal */}
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiService } from '../services/apiService';
-import { ScoreCard } from '../components/football/ScoreCard';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
+import { apiService } from '../../services/apiService';
+import { ScoreCard } from '../../components/football/ScoreCard';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
 import { Zap, Clock, ShieldAlert } from 'lucide-react';
 
 export const LiveMatches = () => {

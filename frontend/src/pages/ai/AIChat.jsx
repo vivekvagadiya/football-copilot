@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { AIResponseCard } from '../components/ai/AIResponseCard';
+import { apiService } from '../../services/apiService';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { AIResponseCard } from '../../components/ai/AIResponseCard';
 
 export const AIChat = () => {
   const [messages, setMessages] = useState([

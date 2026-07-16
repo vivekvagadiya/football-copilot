@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Newspaper, Eye, ChevronDown, ChevronUp } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 
 export const News = () => {
   const [expandedId, setExpandedId] = useState(null);

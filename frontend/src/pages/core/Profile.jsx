@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { User, Mail, ShieldAlert, Award } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Avatar } from '../components/ui/Avatar';
+import { useApp } from '../../context/AppContext';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Avatar } from '../../components/ui/Avatar';
 import { toast } from 'sonner';
 
 const profileSchema = z.object({

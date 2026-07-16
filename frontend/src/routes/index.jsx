@@ -6,27 +6,27 @@ import PublicLayout from '../layouts/PublicLayout';
 import DashboardLayout from '../layouts/DashboardLayout';
 
 // Pages
-import LandingPage from '../pages/LandingPage';
-import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
-import Dashboard from '../pages/Dashboard';
-import LiveMatches from '../pages/LiveMatches';
-import Fixtures from '../pages/Fixtures';
-import MatchDetails from '../pages/MatchDetails';
-import Leagues from '../pages/Leagues';
-import LeagueDetails from '../pages/LeagueDetails';
-import Teams from '../pages/Teams';
-import TeamDetails from '../pages/TeamDetails';
-import Players from '../pages/Players';
-import PlayerProfile from '../pages/PlayerProfile';
-import News from '../pages/News';
-import Transfers from '../pages/Transfers';
-import Favorites from '../pages/Favorites';
-import Notifications from '../pages/Notifications';
-import Profile from '../pages/Profile';
-import Settings from '../pages/Settings';
-import AIChat from '../pages/AIChat';
-import NotFound from '../pages/NotFound';
+import LandingPage from '../pages/core/LandingPage';
+import LoginPage from '../pages/auth/LoginPage';
+import RegisterPage from '../pages/auth/RegisterPage';
+import Dashboard from '../pages/core/Dashboard';
+import LiveMatches from '../pages/football/LiveMatches';
+import Fixtures from '../pages/football/Fixtures';
+import MatchDetails from '../pages/football/MatchDetails';
+import Leagues from '../pages/football/Leagues';
+import LeagueDetails from '../pages/football/LeagueDetails';
+import Teams from '../pages/football/Teams';
+import TeamDetails from '../pages/football/TeamDetails';
+import Players from '../pages/football/Players';
+import PlayerProfile from '../pages/football/PlayerProfile';
+import News from '../pages/football/News';
+import Transfers from '../pages/football/Transfers';
+import Favorites from '../pages/football/Favorites';
+import Notifications from '../pages/core/Notifications';
+import Profile from '../pages/core/Profile';
+import Settings from '../pages/core/Settings';
+import AIChat from '../pages/ai/AIChat';
+import NotFound from '../pages/core/NotFound';
 
 export const AppRoutes = () => {
   return (

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Cpu, Zap, Trophy, Shield, ArrowRight, Activity, Terminal } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { Button } from '../../components/ui/Button';
 
 export const LandingPage = () => {
   const navigate = useNavigate();

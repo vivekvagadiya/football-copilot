@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Shield, Clock, MapPin, Activity, ListFilter, ClipboardList } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Tabs } from '../components/ui/Tabs';
-import { Button } from '../components/ui/Button';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Tabs } from '../../components/ui/Tabs';
+import { Button } from '../../components/ui/Button';
 
 export const MatchDetails = () => {
   const { id } = useParams();

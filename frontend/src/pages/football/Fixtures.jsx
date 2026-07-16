@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiService } from '../services/apiService';
-import { FixtureCard } from '../components/football/FixtureCard';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
+import { apiService } from '../../services/apiService';
+import { FixtureCard } from '../../components/football/FixtureCard';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
 import { CalendarRange, Filter } from 'lucide-react';
 
 export const Fixtures = () => {

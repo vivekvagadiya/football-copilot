@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Award, Calendar, ListOrdered, Shield } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import { Loading } from '../components/ui/Loading';
-import { Card } from '../components/ui/Card';
-import { Tabs } from '../components/ui/Tabs';
-import { FixtureCard } from '../components/football/FixtureCard';
+import { apiService } from '../../services/apiService';
+import { Loading } from '../../components/ui/Loading';
+import { Card } from '../../components/ui/Card';
+import { Tabs } from '../../components/ui/Tabs';
+import { FixtureCard } from '../../components/football/FixtureCard';
 
 export const LeagueDetails = () => {
   const { id } = useParams();
