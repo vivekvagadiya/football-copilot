@@ -1,9 +1,47 @@
 import axiosInstance from "./axios";
 
+export const getLiveMatchesApi = async () => {
+  try {
+    const response = await axiosInstance.get("/football/matches/live");
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
+export const getUpcomingMatchesApi = async () => {
+  try {
+    const response = await axiosInstance.get("/football/matches/upcoming");
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
+export const getStandingsApi = async (league, season) => {
+  try {
+    const params = { league };
+    if (season) params.season = season;
+    const response = await axiosInstance.get("/football/standings", { params });
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
+export const getPlayerLeaderboardApi = async () => {
+  try {
+    const response = await axiosInstance.get("/football/scorers");
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
 export const getDashboardData = async () => {
   try {
     const response = await axiosInstance.get("/football/dashboard");
-    return response?.data;
+    return response?.data?.data || response?.data;
   } catch (error) {
     throw error?.errors?.[0] || error;
   }

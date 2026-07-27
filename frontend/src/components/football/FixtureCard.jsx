@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Calendar, Star } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Button } from '../ui/Button';
+import { TeamLogo } from './TeamLogo';
 
 export const FixtureCard = ({ match }) => {
   const navigate = useNavigate();
@@ -35,14 +36,14 @@ export const FixtureCard = ({ match }) => {
         {/* Home vs Away */}
         <div className="flex flex-col space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-base leading-none">{homeTeam.logo}</span>
+            <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-4 h-4" fallbackSize="text-base" />
             <span className="text-sm font-semibold text-text group-hover:text-primary transition-colors">{homeTeam.name}</span>
             {match.status !== 'upcoming' && (
               <span className="text-sm font-bold ml-auto">{homeTeam.score}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-base leading-none">{awayTeam.logo}</span>
+            <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-4 h-4" fallbackSize="text-base" />
             <span className="text-sm font-semibold text-text group-hover:text-primary transition-colors">{awayTeam.name}</span>
             {match.status !== 'upcoming' && (
               <span className="text-sm font-bold ml-auto">{awayTeam.score}</span>

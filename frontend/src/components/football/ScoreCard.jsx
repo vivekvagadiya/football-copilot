@@ -4,6 +4,7 @@ import { Zap, Clock, Shield } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { TeamLogo } from './TeamLogo';
 
 export const ScoreCard = ({ match }) => {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export const ScoreCard = ({ match }) => {
         {/* Home Team */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="text-lg leading-none shrink-0">{homeTeam.logo}</span>
+            <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-5 h-5" fallbackSize="text-lg" />
             <span className="text-sm font-semibold text-text truncate max-w-[140px]">{homeTeam.name}</span>
           </div>
           <span className="text-base font-display font-extrabold text-text">
@@ -69,7 +70,7 @@ export const ScoreCard = ({ match }) => {
         {/* Away Team */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="text-lg leading-none shrink-0">{awayTeam.logo}</span>
+            <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-5 h-5" fallbackSize="text-lg" />
             <span className="text-sm font-semibold text-text truncate max-w-[140px]">{awayTeam.name}</span>
           </div>
           <span className="text-base font-display font-extrabold text-text">
