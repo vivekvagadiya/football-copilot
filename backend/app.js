@@ -8,6 +8,7 @@ const errorHandler = require("./middleware/error.middleware");
 app.use(helmet());
 
 const authRoutes = require("./routes/auth.routes");
+const footballRoutes = require("./routes/football.routes");
 
 const clientUrl = process.env.CLIENT_URL
   ? process.env.CLIENT_URL
@@ -38,6 +39,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/football", footballRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
