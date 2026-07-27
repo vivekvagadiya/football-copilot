@@ -1,4 +1,5 @@
 const footballApi = require("./footballApi.service");
+const { DEFAULT_COMPETITIONS } = require("../utils/constants");
 
 // --- Helper Functions for Data Mapping ---
 
@@ -147,14 +148,14 @@ const mapMatch = (match) => {
     homeTeam: {
       id: match.homeTeam.id.toString(),
       name: match.homeTeam.shortName || match.homeTeam.name,
-      logo: getEmojiLogo(match.homeTeam.name),
+      logo: match.homeTeam.crest,
       score: homeScore,
       xG: homeXG,
     },
     awayTeam: {
       id: match.awayTeam.id.toString(),
       name: match.awayTeam.shortName || match.awayTeam.name,
-      logo: getEmojiLogo(match.awayTeam.name),
+      logo: match.awayTeam.crest,
       score: awayScore,
       xG: awayXG,
     },
@@ -349,7 +350,7 @@ const getStanding = async (leagueCode = "PL", season) => {
   }
 };
 
-const upcomingMatches = async (dateFrom, dateTo) => {
+const upcomingMatches = async (dateFrom, dateTo, competitions) => {
   try {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -362,10 +363,21 @@ const upcomingMatches = async (dateFrom, dateTo) => {
       dateFrom || defaultPastDate.toISOString().slice(0, 10);
     const formattedDateTo = dateTo || tomorrow.toISOString().slice(0, 10);
 
-    const matchesRes = await footballApi.get(
-      `/matches?dateFrom=${formattedDateFrom}&dateTo=${formattedDateTo}&limit=10&status=SCHEDULED`,
-    );
+    const competitionIds = competitions || DEFAULT_COMPETITIONS.join(",");
+
+    const params = {
+      // dateFrom: formattedDateFrom,
+      dateFrom: "2026-08-20",
+      // dateTo: formattedDateTo,
+      dateTo: "2026-08-29",
+      limit: 10,
+      status: "SCHEDULED",
+      competitions: competitionIds,
+    };
+
+    const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
+
     return rawMatches.map(mapMatch);
   } catch (err) {
     console.error(
@@ -400,11 +412,11 @@ const playerLeaderboard = async () => {
 };
 
 const getDashboardData = async (query = {}) => {
-  const { dateFrom, dateTo, league, season } = query;
+  const { dateFrom, dateTo, league, season, competitions } = query;
   const [matchesRes, standingsRes, upcomingRes, playerRes] = await Promise.all([
     getLiveMatches(),
     getStanding(league || "PL", season),
-    upcomingMatches(dateFrom, dateTo),
+    upcomingMatches(dateFrom, dateTo, competitions),
     playerLeaderboard(),
   ]);
   return {

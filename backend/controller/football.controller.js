@@ -22,8 +22,8 @@ const getStandingController = async (req, res) => {
 
 const getUpcomingMatchesController = async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query;
-    const data = await footballService.upcomingMatches(dateFrom, dateTo);
+    const { dateFrom, dateTo, competitions } = req.query;
+    const data = await footballService.upcomingMatches(dateFrom, dateTo, competitions);
     return apiResponse.success(
       res,
       "Upcoming matches fetched successfully",

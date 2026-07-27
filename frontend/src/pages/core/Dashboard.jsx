@@ -14,13 +14,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { apiService } from "../../services/apiService";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "../../components/ui/Card";
+import { Card } from "../../components/ui/Card";
 import { ScoreCard } from "../../components/football/ScoreCard";
 import { FixtureCard } from "../../components/football/FixtureCard";
 import { TransferCard } from "../../components/football/TransferCard";
@@ -40,7 +34,7 @@ const SEASONS = [
   { value: "2024", label: "2024/2025" },
   { value: "2023", label: "2023/2024" },
   { value: "2022", label: "2022/2023" },
-  { value: "2021", label: "2021/2022" }
+  { value: "2021", label: "2021/2022" },
 ];
 
 export const Dashboard = () => {
@@ -65,7 +59,7 @@ export const Dashboard = () => {
       staleTime: 600000,
     });
 
-  const upcomingMatches = upcomingMatchesRaw.slice(0, 2);
+  const upcomingMatches = upcomingMatchesRaw.slice(0, 4);
 
   // Fetch standings preview - cache for 30 minutes (Option B)
   const { data: plTeamsRaw = [], isLoading: loadingStandings } = useQuery({
@@ -169,7 +163,7 @@ export const Dashboard = () => {
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-display font-extrabold text-sm text-text flex items-center gap-1.5">
-                <Calendar size={14} className="text-muted" /> Today's Match
+                <Calendar size={14} className="text-muted" /> Upcoming Match
                 Matrix
               </h3>
               <Link
@@ -324,7 +318,11 @@ export const Dashboard = () => {
                   className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text focus:outline-none focus:border-primary/50 cursor-pointer"
                 >
                   {SEASONS.map((s) => (
-                    <option key={s.value} value={s.value} className="bg-card text-text">
+                    <option
+                      key={s.value}
+                      value={s.value}
+                      className="bg-card text-text"
+                    >
                       {s.label}
                     </option>
                   ))}
@@ -339,7 +337,7 @@ export const Dashboard = () => {
                 <span className="text-center">GD</span>
                 <span className="text-center">PTS</span>
               </div>
-              
+
               {loadingStandings ? (
                 <div className="space-y-3 py-4 px-2">
                   <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
