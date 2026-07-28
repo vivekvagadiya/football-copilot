@@ -70,10 +70,28 @@ const getDashboardDataController = async (req, res) => {
   }
 };
 
+const getLeagueDetailsController = async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) {
+      return apiResponse.error(res, "League code is required", 400);
+    }
+    const data = await footballService.getLeagueDetails(code);
+    return apiResponse.success(
+      res,
+      "League details fetched successfully",
+      data,
+    );
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
   getUpcomingMatchesController,
   getPlayerLeaderboardController,
   getDashboardDataController,
+  getLeagueDetailsController,
 };

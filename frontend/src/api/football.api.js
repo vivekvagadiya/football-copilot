@@ -51,3 +51,12 @@ export const getDashboardData = async () => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getLeagueDetailsApi = async (code) => {
+  try {
+    const response = await axiosInstance.get(`/football/leagues/${code}`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

@@ -461,10 +461,42 @@ const getDashboardData = async (query = {}) => {
   };
 };
 
+const getLeagueDetails = async (leagueCode) => {
+  try {
+    const response = await footballApi.get(`/competitions/${leagueCode}/teams`);
+    const competition = response.data?.competition || {};
+    const teams = response.data?.teams || [];
+
+    return {
+      code: competition.code,
+      name: competition.name,
+      logo: competition.emblem || "",
+      country: competition.area?.name || "",
+      countryFlag: competition.area?.flag || "",
+      teams: teams.map((t) => ({
+        id: t.id.toString(),
+        name: t.name,
+        shortName: t.shortName || t.name,
+        logo: t.crest || "",
+        founded: t.founded || null,
+        venue: t.venue || "",
+        website: t.website || "",
+      })),
+    };
+  } catch (err) {
+    console.error(
+      `⚠️ [football.service] getLeagueDetails API failed for ${leagueCode}, falling back to mock:`,
+      err.message,
+    );
+    return null;
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
   upcomingMatches,
   playerLeaderboard,
   getDashboardData,
+  getLeagueDetails,
 };

@@ -8,8 +8,12 @@ router.use(authenticate);
 
 router.get("/dashboard", footballController.getDashboardDataController);
 router.get("/matches/live", footballController.getLiveMatchesController);
-router.get("/matches/upcoming", footballController.getUpcomingMatchesController);
+router.get(
+  "/matches/upcoming",
+  footballController.getUpcomingMatchesController,
+);
 router.get("/standings", footballController.getStandingController);
 router.get("/scorers", footballController.getPlayerLeaderboardController);
+router.get("/leagues/:code", footballController.getLeagueDetailsController);
 
 module.exports = router;
