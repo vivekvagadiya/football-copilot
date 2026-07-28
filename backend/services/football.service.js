@@ -107,9 +107,9 @@ const mapMatch = (match) => {
   const isFinished = ["FINISHED"].includes(status);
   const isUpcoming = ["SCHEDULED", "TIMED", "POSTPONED"].includes(status);
 
-  let mappedStatus = "upcoming";
-  if (isLive) mappedStatus = "live";
-  else if (isFinished) mappedStatus = "finished";
+  let mappedStatus = "SCHEDULED";
+  if (isLive) mappedStatus = "LIVE";
+  else if (isFinished) mappedStatus = "FINISHED";
 
   const minute = isLive ? 74 : null;
 
@@ -141,7 +141,7 @@ const mapMatch = (match) => {
 
   return {
     id: match.id.toString(),
-    leagueId: match.competition?.code?.toLowerCase() || "pl",
+    leagueId: match.competition?.code || "PL",
     leagueName: match.competition?.name || "Premier League",
     leagueLogo: match.competition?.emblem || "",
     status: mappedStatus,
@@ -358,6 +358,8 @@ const upcomingMatches = async (
   competitions,
   limit = 10,
   offset = 0,
+  status,
+  leagueId,
 ) => {
   try {
     const today = new Date();
@@ -367,25 +369,26 @@ const upcomingMatches = async (
     const defaultPastDate = new Date(today);
     defaultPastDate.setDate(defaultPastDate.getDate() - 7);
 
-    const formattedDateFrom =
-      dateFrom || defaultPastDate.toISOString().slice(0, 10);
-    const formattedDateTo = dateTo || tomorrow.toISOString().slice(0, 10);
+    const params = {
+      dateFrom: dateFrom || "2026-08-20",
+      dateTo: dateTo || "2026-08-29",
+    };
 
-    const competitionIds = competitions || DEFAULT_COMPETITIONS.join(",");
+    const compFilter =
+      leagueId || competitions || DEFAULT_COMPETITIONS.join(",");
+    if (compFilter && compFilter !== "all") {
+      params.competitions = compFilter;
+    }
+
+    if (status && status !== "all") {
+      params.status = status;
+    }
 
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
     const parsedOffset = offset ? parseInt(offset, 10) : 0;
+    params.limit = 100;
 
-    const params = {
-      // dateFrom: formattedDateFrom,
-      dateFrom: "2026-08-20",
-      // dateTo: formattedDateTo,
-      dateTo: "2026-08-29",
-      limit: 10,
-      status: "SCHEDULED",
-      competitions: competitionIds,
-    };
-
+    console.log("Calling footballApi.get('/matches') with params:", params);
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
 

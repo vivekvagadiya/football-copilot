@@ -9,9 +9,11 @@ export const getLiveMatchesApi = async () => {
   }
 };
 
-export const getUpcomingMatchesApi = async () => {
+export const getUpcomingMatchesApi = async (params) => {
   try {
-    const response = await axiosInstance.get("/football/matches/upcoming");
+    const response = await axiosInstance.get("/football/matches/upcoming", {
+      params,
+    });
     return response?.data?.data || [];
   } catch (error) {
     throw error?.errors?.[0] || error;

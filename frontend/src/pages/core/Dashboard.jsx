@@ -59,8 +59,8 @@ export const Dashboard = () => {
   // Fetch upcoming matches - cache for 10 minutes (Option B)
   const { data: upcomingMatchesRaw = [], isLoading: loadingUpcoming } =
     useQuery({
-      queryKey: ["upcomingMatches"],
-      queryFn: getUpcomingMatchesApi,
+      queryKey: ["upcomingMatches", "SCHEDULED"],
+      queryFn: () => getUpcomingMatchesApi({ status: "SCHEDULED" }),
       staleTime: 600000,
     });
 
