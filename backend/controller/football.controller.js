@@ -12,8 +12,8 @@ const getLiveMatchesController = async (req, res) => {
 
 const getStandingController = async (req, res) => {
   try {
-    const { league, season } = req.query;
-    const data = await footballService.getStanding(league, season);
+    const { league, season, limit } = req.query;
+    const data = await footballService.getStanding(league, season, limit);
     return apiResponse.success(res, "Standings fetched successfully", data);
   } catch (error) {
     return apiResponse.error(res, error.message);
@@ -22,8 +22,14 @@ const getStandingController = async (req, res) => {
 
 const getUpcomingMatchesController = async (req, res) => {
   try {
-    const { dateFrom, dateTo, competitions } = req.query;
-    const data = await footballService.upcomingMatches(dateFrom, dateTo, competitions);
+    const { dateFrom, dateTo, competitions, limit, offset } = req.query;
+    const data = await footballService.upcomingMatches(
+      dateFrom,
+      dateTo,
+      competitions,
+      limit,
+      offset,
+    );
     return apiResponse.success(
       res,
       "Upcoming matches fetched successfully",
@@ -36,7 +42,8 @@ const getUpcomingMatchesController = async (req, res) => {
 
 const getPlayerLeaderboardController = async (req, res) => {
   try {
-    const data = await footballService.playerLeaderboard();
+    const { league, season, limit } = req.query;
+    const data = await footballService.playerLeaderboard(league, season, limit);
     return apiResponse.success(
       res,
       "Player leaderboard fetched successfully",

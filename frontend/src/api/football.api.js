@@ -29,9 +29,12 @@ export const getStandingsApi = async (league, season) => {
   }
 };
 
-export const getPlayerLeaderboardApi = async () => {
+export const getPlayerLeaderboardApi = async (league, season) => {
   try {
-    const response = await axiosInstance.get("/football/scorers");
+    const params = {};
+    if (league) params.league = league;
+    if (season) params.season = season;
+    const response = await axiosInstance.get("/football/scorers", { params });
     return response?.data?.data || [];
   } catch (error) {
     throw error?.errors?.[0] || error;

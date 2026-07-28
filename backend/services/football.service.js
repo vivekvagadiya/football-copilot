@@ -318,10 +318,11 @@ const getLiveMatches = async () => {
   }
 };
 
-const getStanding = async (leagueCode = "PL", season) => {
+const getStanding = async (leagueCode = "PL", season, limit = 10) => {
   try {
     const params = {};
     if (season) params.season = season;
+    if (limit) params.limit = limit;
 
     const standingsRes = await footballApi.get(
       `/competitions/${leagueCode}/standings`,
@@ -350,7 +351,13 @@ const getStanding = async (leagueCode = "PL", season) => {
   }
 };
 
-const upcomingMatches = async (dateFrom, dateTo, competitions) => {
+const upcomingMatches = async (
+  dateFrom,
+  dateTo,
+  competitions,
+  limit = 10,
+  offset = 0,
+) => {
   try {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -365,6 +372,9 @@ const upcomingMatches = async (dateFrom, dateTo, competitions) => {
 
     const competitionIds = competitions || DEFAULT_COMPETITIONS.join(",");
 
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
+
     const params = {
       // dateFrom: formattedDateFrom,
       dateFrom: "2026-08-20",
@@ -378,24 +388,43 @@ const upcomingMatches = async (dateFrom, dateTo, competitions) => {
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
 
-    return rawMatches.map(mapMatch);
+    const mapped = rawMatches.map(mapMatch);
+    return mapped;
   } catch (err) {
     console.error(
       "⚠️ [football.service] upcomingMatches API failed, falling back to mock:",
       err.message,
     );
-    return MOCK_UPCOMING_MATCHES;
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
+    return MOCK_UPCOMING_MATCHES.slice(
+      parsedOffset,
+      parsedOffset + parsedLimit,
+    );
   }
 };
 
-const playerLeaderboard = async () => {
+const playerLeaderboard = async (
+  competition = "PL",
+  season = 2025,
+  limit = 10,
+) => {
   try {
-    const playerRes = await footballApi.get("/competitions/PL/scorers");
+    const params = {
+      season,
+      limit,
+    };
+    const playerRes = await footballApi.get(
+      `/competitions/${competition}/scorers`,
+      {
+        params,
+      },
+    );
     const rawScorers = playerRes.data?.scorers || [];
     return rawScorers.map((item) => ({
       id: item.player.id.toString(),
       name: item.player.name,
-      flag: getFlagEmoji(item.player.nationality),
+      flag: item.team.crest,
       teamName: item.team.shortName || item.team.name,
       position: item.player.position || "Forward",
       stats: {
@@ -412,12 +441,13 @@ const playerLeaderboard = async () => {
 };
 
 const getDashboardData = async (query = {}) => {
-  const { dateFrom, dateTo, league, season, competitions } = query;
+  const { dateFrom, dateTo, league, season, competitions, limit, offset } =
+    query;
   const [matchesRes, standingsRes, upcomingRes, playerRes] = await Promise.all([
     getLiveMatches(),
     getStanding(league || "PL", season),
-    upcomingMatches(dateFrom, dateTo, competitions),
-    playerLeaderboard(),
+    upcomingMatches(dateFrom, dateTo, competitions, limit, offset),
+    playerLeaderboard(league || "PL", season),
   ]);
   return {
     matches: matchesRes,
