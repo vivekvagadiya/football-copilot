@@ -143,6 +143,7 @@ const mapMatch = (match) => {
     id: match.id.toString(),
     leagueId: match.competition?.code?.toLowerCase() || "pl",
     leagueName: match.competition?.name || "Premier League",
+    leagueLogo: match.competition?.emblem || "",
     status: mappedStatus,
     minute,
     homeTeam: {

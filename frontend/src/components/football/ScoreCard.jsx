@@ -8,7 +8,7 @@ import { TeamLogo } from './TeamLogo';
 
 export const ScoreCard = ({ match }) => {
   const navigate = useNavigate();
-  const { id, status, minute, homeTeam, awayTeam, leagueName, date } = match;
+  const { id, status, minute, homeTeam, awayTeam, leagueName, leagueLogo, date } = match;
 
   const isLive = status === 'live';
   const isUpcoming = status === 'upcoming';
@@ -31,7 +31,14 @@ export const ScoreCard = ({ match }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-3.5">
         <span className="text-[10px] text-muted font-bold uppercase tracking-wider flex items-center gap-1.5">
-          <Shield size={11} className="text-muted" /> {leagueName}
+          {leagueLogo ? (
+            <div className="w-4 h-4 flex items-center justify-center bg-white rounded-full p-0.5 shadow-sm shrink-0">
+              <img src={leagueLogo} alt="" className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <Shield size={11} className="text-muted" />
+          )}
+          {leagueName}
         </span>
 
         {isLive && (

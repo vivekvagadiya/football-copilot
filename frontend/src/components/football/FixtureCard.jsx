@@ -8,7 +8,7 @@ import { TeamLogo } from './TeamLogo';
 export const FixtureCard = ({ match }) => {
   const navigate = useNavigate();
   const { toggleFavorite, isFavorite } = useApp();
-  const { id, homeTeam, awayTeam, leagueName, date, status, minute } = match;
+  const { id, homeTeam, awayTeam, leagueName, leagueLogo, date, status, minute } = match;
 
   const isFavorited = isFavorite('teams', homeTeam.id) || isFavorite('teams', awayTeam.id);
 
@@ -24,13 +24,20 @@ export const FixtureCard = ({ match }) => {
     >
       {/* Time & League */}
       <div className="flex items-center gap-4">
-        <div className="flex flex-col items-center justify-center border-r border-border pr-3 min-w-[70px]">
+        <div className="flex flex-col items-center justify-center border-r border-border pr-3 min-w-[75px]">
           {status === 'live' ? (
             <span className="text-xs text-red-500 font-extrabold animate-pulse uppercase">Live {minute}'</span>
           ) : (
             <span className="text-xs text-muted font-semibold">{date}</span>
           )}
-          <span className="text-[9px] text-muted uppercase mt-0.5 truncate max-w-[65px]">{leagueName}</span>
+          <span className="text-[9px] text-muted uppercase mt-1 truncate max-w-[70px] flex items-center gap-1 justify-center">
+            {leagueLogo && (
+              <div className="w-3.5 h-3.5 flex items-center justify-center bg-white rounded-full p-0.5 shadow-sm shrink-0">
+                <img src={leagueLogo} alt="" className="w-full h-full object-contain" />
+              </div>
+            )}
+            <span className="truncate">{leagueName}</span>
+          </span>
         </div>
 
         {/* Home vs Away */}
