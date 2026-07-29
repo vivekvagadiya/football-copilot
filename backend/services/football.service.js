@@ -1,82 +1,12 @@
 const footballApi = require("./footballApi.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
-
-// --- Helper Functions for Data Mapping ---
-
-const getEmojiLogo = (teamName) => {
-  if (!teamName) return "⚽";
-  const name = teamName.toLowerCase();
-  if (name.includes("arsenal")) return "🔴";
-  if (name.includes("manchester city") || name.includes("man city"))
-    return "🩵";
-  if (name.includes("liverpool")) return "🔴";
-  if (name.includes("chelsea")) return "🔵";
-  if (
-    name.includes("manchester united") ||
-    name.includes("man united") ||
-    name.includes("man utd")
-  )
-    return "🔴";
-  if (name.includes("tottenham") || name.includes("spurs")) return "⚪";
-  if (name.includes("aston villa")) return "🦁";
-  if (name.includes("newcastle")) return "⚫⚪";
-  if (name.includes("west ham")) return "⚒️";
-  if (name.includes("brighton")) return "🔵⚪";
-  if (name.includes("wolverhampton") || name.includes("wolves")) return "🐺";
-  if (name.includes("fulham")) return "⚪⚫";
-  if (name.includes("crystal palace")) return "🦅";
-  if (name.includes("brentford")) return "🐝";
-  if (name.includes("everton")) return "🔵";
-  if (name.includes("nottingham forest") || name.includes("nottingham"))
-    return "🌳";
-  if (name.includes("bournemouth")) return "🍒";
-  if (name.includes("leicester")) return "🦊";
-  if (name.includes("ipswich")) return "🚜";
-  if (name.includes("southampton")) return "🔴⚪";
-  return "⚽";
-};
-
-const getFlagEmoji = (nationality) => {
-  if (!nationality) return "🏳️";
-  const nat = nationality.toLowerCase();
-  if (nat === "england") return "🏴󠁧󠁢󠁥󠁮󠁧󠁿";
-  if (nat === "norway") return "🇳🇴";
-  if (nat === "egypt") return "🇪🇬";
-  if (nat === "france") return "🇫🇷";
-  if (nat === "brazil") return "🇧🇷";
-  if (nat === "argentina") return "🇦🇷";
-  if (nat === "portugal") return "🇵🇹";
-  if (nat === "spain") return "🇪🇸";
-  if (nat === "belgium") return "🇧🇪";
-  if (nat === "germany") return "🇩🇪";
-  if (nat === "netherlands" || nat === "holland") return "🇳🇱";
-  if (nat === "senegal") return "🇸🇳";
-  if (nat === "sweden") return "🇸🇪";
-  if (nat === "denmark") return "🇩🇰";
-  if (nat === "italy") return "🇮🇹";
-  if (nat === "croatia") return "🇭🇷";
-  if (nat === "scotland") return "🏴󠁧󠁢󠁳󠁣󠁴󠁿";
-  if (nat === "wales") return "🏴󠁧󠁢󠁷󠁬󠁳󠁿";
-  if (nat === "republic of ireland" || nat === "ireland") return "🇮🇪";
-  if (nat === "poland") return "🇵🇱";
-  if (nat === "cameroon") return "🇨🇲";
-  if (nat === "nigeria") return "🇳🇬";
-  if (nat === "ghana") return "🇬🇭";
-  if (nat === "ivory coast" || nat === "côte d'ivoire") return "🇨🇮";
-  if (nat === "colombia") return "🇨🇴";
-  if (nat === "uruguay") return "🇺🇾";
-  if (nat === "chile") return "🇨🇱";
-  if (nat === "mexico") return "🇲🇽";
-  if (nat === "united states" || nat === "usa") return "🇺🇸";
-  if (nat === "canada") return "🇨🇦";
-  if (nat === "australia") return "🇦🇺";
-  if (nat === "japan") return "🇯🇵";
-  if (nat === "south korea" || nat === "korea republic") return "🇰🇷";
-  if (nat === "ukraine") return "🇺🇦";
-  if (nat === "austria") return "🇦🇹";
-  if (nat === "switzerland") return "🇨🇭";
-  return "🏳️";
-};
+const {
+  MOCK_LIVE_MATCHES,
+  MOCK_UPCOMING_MATCHES,
+  MOCK_STANDINGS,
+  MOCK_SCORERS,
+  MOCK_MATCH_DETAILS,
+} = require("./mockData");
 
 const formatMatchDate = (utcDateStr) => {
   if (!utcDateStr) return "";
@@ -168,140 +98,7 @@ const mapMatch = (match) => {
 
 // --- Mock Data Fallbacks for API Rate-Limits/Errors ---
 
-const MOCK_LIVE_MATCHES = [
-  {
-    id: "m1",
-    leagueId: "pl",
-    leagueName: "Premier League",
-    status: "live",
-    minute: 74,
-    homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84 },
-    awayTeam: { id: "65", name: "Man City", logo: "🩵", score: 1, xG: 1.12 },
-    date: "Live",
-    timestamp: new Date().toISOString(),
-  },
-];
-
-const MOCK_UPCOMING_MATCHES = [
-  {
-    id: "m2",
-    leagueId: "laliga",
-    leagueName: "La Liga",
-    status: "upcoming",
-    date: "Today, 21:00",
-    timestamp: new Date(Date.now() + 3600000 * 11).toISOString(),
-    homeTeam: {
-      id: "86",
-      name: "Real Madrid",
-      logo: "⚪",
-      score: null,
-      xG: null,
-    },
-    awayTeam: {
-      id: "81",
-      name: "Barcelona",
-      logo: "🔵🔴",
-      score: null,
-      xG: null,
-    },
-    prediction: { homeWin: 42, draw: 28, awayWin: 30 },
-  },
-  {
-    id: "m4",
-    leagueId: "pl",
-    leagueName: "Premier League",
-    status: "upcoming",
-    date: "Tomorrow, 15:00",
-    timestamp: new Date(Date.now() + 3600000 * 29).toISOString(),
-    homeTeam: {
-      id: "64",
-      name: "Liverpool",
-      logo: "🔴",
-      score: null,
-      xG: null,
-    },
-    awayTeam: { id: "61", name: "Chelsea", logo: "🔵", score: null, xG: null },
-    prediction: { homeWin: 55, draw: 25, awayWin: 20 },
-  },
-];
-
-const MOCK_STANDINGS = [
-  {
-    id: "57",
-    leagueId: "pl",
-    name: "Arsenal",
-    logo: "🔴",
-    played: 28,
-    won: 20,
-    drawn: 5,
-    lost: 3,
-    gd: 38,
-    points: 65,
-  },
-  {
-    id: "65",
-    leagueId: "pl",
-    name: "Manchester City",
-    logo: "🩵",
-    played: 28,
-    won: 19,
-    drawn: 6,
-    lost: 3,
-    gd: 36,
-    points: 63,
-  },
-  {
-    id: "64",
-    leagueId: "pl",
-    name: "Liverpool",
-    logo: "🔴",
-    played: 28,
-    won: 18,
-    drawn: 7,
-    lost: 3,
-    gd: 32,
-    points: 61,
-  },
-  {
-    id: "61",
-    leagueId: "pl",
-    name: "Chelsea",
-    logo: "🔵",
-    played: 28,
-    won: 15,
-    drawn: 8,
-    lost: 5,
-    gd: 18,
-    points: 53,
-  },
-];
-
-const MOCK_SCORERS = [
-  {
-    id: "p1",
-    name: "Erling Haaland",
-    flag: "🇳🇴",
-    teamName: "Manchester City",
-    position: "Forward",
-    stats: { goals: 28 },
-  },
-  {
-    id: "p2",
-    name: "Bukayo Saka",
-    flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    teamName: "Arsenal",
-    position: "Forward",
-    stats: { goals: 18 },
-  },
-  {
-    id: "p3",
-    name: "Mohamed Salah",
-    flag: "🇪🇬",
-    teamName: "Liverpool",
-    position: "Forward",
-    stats: { goals: 17 },
-  },
-];
+// Mock data is imported from ./mockData.js
 
 // --- Service Functions ---
 
@@ -335,7 +132,7 @@ const getStanding = async (leagueCode = "PL", season, limit = 10) => {
       id: item.team.id.toString(),
       leagueId: standingsRes?.data?.competition?.code || leagueCode,
       name: item.team.shortName || item.team.name,
-      logo: item.team.crest || getEmojiLogo(item.team.name),
+      logo: item.team.crest || "",
       played: item.playedGames,
       won: item.won,
       drawn: item.draw,
@@ -508,94 +305,8 @@ const getMatchDetails = async (matchId) => {
     return mapped;
   } catch (error) {
     console.error("Error fetching match details:", error);
-    // If API fails (e.g. rate limit, or invalid matchId like mock IDs "m1"),
-    // check if it's one of the mock IDs and return the corresponding mock match.
-    if (matchId === "m1") {
-      return {
-        id: "m1",
-        leagueId: "pl",
-        leagueName: "Premier League",
-        status: "live",
-        minute: 74,
-        homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84 },
-        awayTeam: {
-          id: "65",
-          name: "Man City",
-          logo: "🩵",
-          score: 1,
-          xG: 1.12,
-        },
-        date: "Live",
-        venue: "Emirates Stadium",
-        referee: "Michael Oliver",
-      };
-    }
-    if (matchId === "m2") {
-      return {
-        id: "m2",
-        leagueId: "laliga",
-        leagueName: "La Liga",
-        status: "upcoming",
-        date: "Today, 21:00",
-        homeTeam: {
-          id: "86",
-          name: "Real Madrid",
-          logo: "⚪",
-          score: null,
-          xG: null,
-        },
-        awayTeam: {
-          id: "81",
-          name: "Barcelona",
-          logo: "🔵🔴",
-          score: null,
-          xG: null,
-        },
-        venue: "Santiago Bernabéu",
-        referee: "Jesús Gil Manzano",
-        prediction: { homeWin: 42, draw: 28, awayWin: 30 },
-      };
-    }
-    if (matchId === "m4") {
-      return {
-        id: "m4",
-        leagueId: "pl",
-        leagueName: "Premier League",
-        status: "upcoming",
-        date: "Tomorrow, 15:00",
-        homeTeam: {
-          id: "64",
-          name: "Liverpool",
-          logo: "🔴",
-          score: null,
-          xG: null,
-        },
-        awayTeam: {
-          id: "61",
-          name: "Chelsea",
-          logo: "🔵",
-          score: null,
-          xG: null,
-        },
-        venue: "Anfield",
-        referee: "Anthony Taylor",
-        prediction: { homeWin: 55, draw: 25, awayWin: 20 },
-      };
-    }
-
-    // Default fallback to live mock if it's unknown/failed
-    return {
-      id: matchId,
-      leagueId: "pl",
-      leagueName: "Premier League",
-      status: "live",
-      minute: 74,
-      homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84 },
-      awayTeam: { id: "65", name: "Man City", logo: "🩵", score: 1, xG: 1.12 },
-      date: "Live",
-      venue: "Emirates Stadium",
-      referee: "Michael Oliver",
-    };
+    // Return the corresponding mock match if it exists, otherwise default to m1 live match
+    return MOCK_MATCH_DETAILS[matchId] || MOCK_MATCH_DETAILS["m1"];
   }
 };
 
