@@ -60,3 +60,12 @@ export const getLeagueDetailsApi = async (code) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getMatchDetailsApi = async (matchId) => {
+  try {
+    const response = await axiosInstance.get(`/football/matches/${matchId}`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

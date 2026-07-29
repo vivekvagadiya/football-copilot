@@ -8,6 +8,8 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
+import { TeamLogo } from '../../components/football/TeamLogo';
+import { getMatchDetailsApi } from '../../api/football.api';
 
 export const MatchDetails = () => {
   const { id } = useParams();
@@ -15,8 +17,8 @@ export const MatchDetails = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: match, isLoading } = useQuery({
-    queryKey: ['match', id],
-    queryFn: () => apiService.getMatch(id),
+    queryKey: ['matchDetail', id],
+    queryFn: () => getMatchDetailsApi(id),
     enabled: !!id
   });
 
@@ -63,7 +65,9 @@ export const MatchDetails = () => {
           <div className="flex items-center justify-center gap-8 sm:gap-12 w-full max-w-lg">
             {/* Home Team */}
             <div className="flex-1 flex flex-col items-center min-w-0">
-              <span className="text-4xl leading-none mb-2">{homeTeam.logo}</span>
+              <div className="mb-2">
+                <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
+              </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{homeTeam.name}</span>
               {homeTeam.xG && (
                 <span className="text-[9px] text-muted font-mono mt-0.5">xG: {homeTeam.xG.toFixed(2)}</span>
@@ -98,7 +102,9 @@ export const MatchDetails = () => {
 
             {/* Away Team */}
             <div className="flex-1 flex flex-col items-center min-w-0">
-              <span className="text-4xl leading-none mb-2">{awayTeam.logo}</span>
+              <div className="mb-2">
+                <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
+              </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{awayTeam.name}</span>
               {awayTeam.xG && (
                 <span className="text-[9px] text-muted font-mono mt-0.5">xG: {awayTeam.xG.toFixed(2)}</span>
@@ -121,11 +127,14 @@ export const MatchDetails = () => {
         </div>
       </Card>
 
-      {/* Tabs */}
+      {/* Tabs - Commented out since detailed stats/lineups are not present in current API response */}
+      {/*
       <Tabs tabs={tabOptions} activeTab={activeTab} onChange={setActiveTab} />
+      */}
 
-      {/* Tab Contents */}
-      <div className="mt-4">
+      {/* Tab Contents - Commented out via false conditional since detailed events/stats/lineups are not present in API */}
+      {false && (
+        <div className="mt-4">
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -374,7 +383,8 @@ export const MatchDetails = () => {
             </Card>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
