@@ -22,4 +22,5 @@ router.get(
   footballController.getTeamsByCompetationController
 );
 router.get("/players/:id", footballController.getPlayerDetailsController);
+router.get("/teams/:id", footballController.getTeamDetailsController);
 module.exports = router;

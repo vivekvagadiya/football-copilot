@@ -421,6 +421,54 @@ const getPlayerDetails = async (personId) => {
   }
 };
 
+const getTeamDetails = async (teamId) => {
+  try {
+    const response = await footballApi.get(`/teams/${teamId}`);
+    const data = response.data;
+    if (!data) return null;
+
+    return {
+      id: String(data.id),
+      name: data.name,
+      shortName: data.shortName || data.name,
+      tla: data.tla || "",
+      crest: data.crest || "",
+      logo: data.crest || "",
+      address: data.address || "",
+      website: data.website || "",
+      founded: data.founded || null,
+      clubColors: data.clubColors || "",
+      venue: data.venue || "N/A",
+      stadium: data.venue || "N/A",
+      area: data.area || null,
+      runningCompetitions: data.runningCompetitions || [],
+      coach: data.coach
+        ? {
+            id: data.coach.id,
+            name: data.coach.name,
+            firstName: data.coach.firstName,
+            lastName: data.coach.lastName,
+            nationality: data.coach.nationality || "",
+            dateOfBirth: data.coach.dateOfBirth || "",
+          }
+        : null,
+      manager: data.coach?.name || "N/A",
+      squad: (data.squad || []).map((player) => ({
+        id: String(player.id),
+        name: player.name,
+        position: player.position || player.section || "Player",
+        dateOfBirth: player.dateOfBirth || "",
+        nationality: player.nationality || "",
+      })),
+      staff: data.staff || [],
+      lastUpdated: data.lastUpdated || "",
+    };
+  } catch (error) {
+    console.error("Error fetching team details:", error);
+    return null;
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -432,4 +480,5 @@ module.exports = {
   getCompetation,
   getTeamsByCompetation,
   getPlayerDetails,
+  getTeamDetails,
 };

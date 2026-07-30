@@ -29,6 +29,7 @@ import {
   Radar,
 } from "recharts";
 import { apiService } from "../../services/apiService";
+import { getTeamDetailsApi } from "../../api/football.api";
 import { Loading } from "../../components/ui/Loading";
 import { Card } from "../../components/ui/Card";
 import { Tabs } from "../../components/ui/Tabs";
@@ -49,11 +50,20 @@ export const TeamDetails = () => {
 
   const { data: fetchedTeam, isLoading } = useQuery({
     queryKey: ["team", id],
-    queryFn: () => apiService.getTeam(id),
-    enabled: !stateTeam && !!id,
+    queryFn: async () => {
+      try {
+        const apiData = await getTeamDetailsApi(id);
+        if (apiData) return apiData;
+      } catch (err) {
+        console.warn("getTeamDetailsApi error, falling back:", err);
+      }
+      return apiService.getTeam(id);
+    },
+    staleTime: 600000,
+    enabled: !!id,
   });
 
-  const team = stateTeam || fetchedTeam;
+  const team = fetchedTeam || stateTeam;
 
   if (isLoading && !team) {
     return <Loading text="Fetching club roster and telemetry charts..." />;
