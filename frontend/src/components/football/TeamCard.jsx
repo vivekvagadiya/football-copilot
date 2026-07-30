@@ -1,13 +1,14 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Star, MapPin, Users, Globe, Trophy } from "lucide-react";
+import { Shield, MapPin, Users, Globe, Trophy } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import { useApp } from "../../context/AppContext";
+import FavoriteButton from "../common/FavoriteButton";
 
 export const TeamCard = ({ team }) => {
   const navigate = useNavigate();
-  const { toggleFavorite, isFavorite } = useApp();
+  const { isFavorite } = useApp();
 
   const {
     id,
@@ -51,17 +52,20 @@ export const TeamCard = ({ team }) => {
       onClick={handleCardClick}
       className="relative flex flex-col justify-between overflow-hidden border border-border hover:border-primary/40 transition-all p-4 group cursor-pointer"
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleFavorite("teams", id);
-        }}
-        className={`absolute top-3 right-3 p-1.5 rounded-full hover:bg-border/30 z-10 transition-colors ${
-          isFavorited ? "text-primary" : "text-muted hover:text-text"
-        }`}
-      >
-        <Star size={14} className={isFavorited ? "fill-current" : ""} />
-      </button>
+      <div className="absolute top-2 right-2 z-10">
+        <FavoriteButton
+          itemType="TEAM"
+          externalId={id}
+          iconType="star"
+          meta={{
+            name: name || "Team",
+            badgeUrl: teamCrest || "",
+            subtitle: venueName !== "N/A" ? venueName : "",
+          }}
+          isFavoriteInitial={isFavorited}
+          size={16}
+        />
+      </div>
 
       <div>
         {/* Header: Crest & Club Name */}

@@ -26,6 +26,11 @@ const endpoints = {
     getGroupMessages:'/groups/:groupId/messages',
     sendMessage:'/conversations/:conversationId/messages',
     sendGroupMessage:'/groups/:groupId/messages'
+  },
+  favorites: {
+    toggle: "/favorites/toggle",
+    getFavorites: "/favorites",
+    getFavoriteIds: "/favorites/ids",
   }
 };
 

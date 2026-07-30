@@ -28,10 +28,23 @@ export const AppProvider = ({ children }) => {
 
   const [favorites, setFavorites] = useState(() => {
     const saved = localStorage.getItem("favorites");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          teams: parsed.teams || [],
+          players: parsed.players || [],
+          matches: parsed.matches || [],
+          leagues: parsed.leagues || [],
+        };
+      } catch (e) {
+        // Fallback on parse error
+      }
+    }
     return {
       teams: [],
       players: [],
+      matches: [],
       leagues: [],
     };
   });
@@ -62,7 +75,33 @@ export const AppProvider = ({ children }) => {
     setColorTheme(themeName);
   };
 
-  // Sync favorites
+  // Sync favorites with Backend API on mount
+  useEffect(() => {
+    const fetchFavoriteIds = async () => {
+      const { tokenService } = await import("../api/tokenService");
+      const token = tokenService.getAccessToken();
+      if (!token) return;
+
+      try {
+        const { getFavoriteIdsApi } = await import("../api/favorite.api");
+        const res = await getFavoriteIdsApi();
+        if (res.success && res.data) {
+          setFavorites({
+            teams: (res.data.TEAM || []).map(String),
+            players: (res.data.PLAYER || []).map(String),
+            matches: (res.data.MATCH || []).map(String),
+            leagues: (res.data.LEAGUE || []).map(String),
+          });
+        }
+      } catch (err) {
+        console.warn("Could not sync favorite IDs with backend:", err.message);
+      }
+    };
+
+    fetchFavoriteIds();
+  }, [user]);
+
+  // Sync favorites to local storage
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify(favorites));
   }, [favorites]);
@@ -92,18 +131,32 @@ export const AppProvider = ({ children }) => {
     setUser((prev) => (prev ? { ...prev, ...updatedFields } : null));
   };
 
+  const normalizeFavoriteKey = (type) => {
+    const key = String(type).toLowerCase();
+    if (key === "team" || key === "teams") return "teams";
+    if (key === "player" || key === "players") return "players";
+    if (key === "match" || key === "matches") return "matches";
+    if (key === "league" || key === "leagues") return "leagues";
+    return key;
+  };
+
   const toggleFavorite = (type, id) => {
+    const key = normalizeFavoriteKey(type);
     setFavorites((prev) => {
-      const list = prev[type] || [];
-      const updated = list.includes(id)
-        ? list.filter((item) => item !== id)
-        : [...list, id];
-      return { ...prev, [type]: updated };
+      const list = prev[key] || [];
+      const idStr = String(id);
+      const exists = list.some((item) => String(item) === idStr);
+      const updated = exists
+        ? list.filter((item) => String(item) !== idStr)
+        : [...list, idStr];
+      return { ...prev, [key]: updated };
     });
   };
 
   const isFavorite = (type, id) => {
-    return (favorites[type] || []).includes(id);
+    const key = normalizeFavoriteKey(type);
+    const list = favorites[key] || [];
+    return list.some((item) => String(item) === String(id));
   };
 
   const markNotificationAsRead = (id) => {
