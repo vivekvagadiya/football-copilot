@@ -46,7 +46,8 @@ export const Dashboard = () => {
 
   const [selectedScorerLeague, setSelectedScorerLeague] = useState("PL");
   const [selectedScorerSeason, setSelectedScorerSeason] = useState("2025");
-  const [isScorerLeagueDropdownOpen, setIsScorerLeagueDropdownOpen] = useState(false);
+  const [isScorerLeagueDropdownOpen, setIsScorerLeagueDropdownOpen] =
+    useState(false);
 
   // Fetch live matches - poll every 30s (Option B)
   const { data: liveMatches = [], isLoading: loadingLive } = useQuery({
@@ -78,7 +79,8 @@ export const Dashboard = () => {
   // Fetch top scorers leaderboard - cache for 30 minutes (Option B)
   const { data: topScorers = [], isLoading: loadingLeaderboard } = useQuery({
     queryKey: ["playerLeaderboard", selectedScorerLeague, selectedScorerSeason],
-    queryFn: () => getPlayerLeaderboardApi(selectedScorerLeague, selectedScorerSeason),
+    queryFn: () =>
+      getPlayerLeaderboardApi(selectedScorerLeague, selectedScorerSeason),
     staleTime: 1800000,
   });
 
@@ -236,7 +238,7 @@ export const Dashboard = () => {
                 <Trophy size={14} className="text-muted" /> Standings Preview
               </h4>
               <Link
-                to={`/league/${selectedLeague.toLowerCase()}`}
+                to={`/league/${selectedLeague}`}
                 className="text-[10px] text-primary hover:underline"
               >
                 Full Table
@@ -389,7 +391,8 @@ export const Dashboard = () => {
           {/* Top Scorers */}
           <Card className="p-4 border border-border">
             <h4 className="font-display font-bold text-xs text-text flex items-center gap-1.5 mb-3">
-              <Volleyball size={14} className="text-muted" /> Golden Boot Leaderboard
+              <Volleyball size={14} className="text-muted" /> Golden Boot
+              Leaderboard
             </h4>
 
             {/* Dropdown Filters Grid */}
@@ -397,7 +400,9 @@ export const Dashboard = () => {
               {/* Reusable Premium Custom League Selector Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setIsScorerLeagueDropdownOpen(!isScorerLeagueDropdownOpen)}
+                  onClick={() =>
+                    setIsScorerLeagueDropdownOpen(!isScorerLeagueDropdownOpen)
+                  }
                   className="w-full flex items-center justify-between bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text focus:outline-none focus:border-primary/50 cursor-pointer"
                 >
                   {(() => {

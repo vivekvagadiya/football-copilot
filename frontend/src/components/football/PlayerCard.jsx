@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Target, Shield } from "lucide-react";
+import { Star, Shield, ArrowRight } from "lucide-react";
+
 import { Card } from "../ui/Card";
 import { Avatar } from "../ui/Avatar";
 import { useApp } from "../../context/AppContext";
@@ -17,9 +18,8 @@ export const PlayerCard = ({ player }) => {
     flag,
     teamName,
     teamCrest,
-    position,
-    number,
     nationality,
+    position,
     goals,
     assists,
     playedMatches,
@@ -28,63 +28,51 @@ export const PlayerCard = ({ player }) => {
     stats = {},
   } = player || {};
 
-  const crestUrl = teamCrest || flag;
+  const crest = teamCrest || flag;
   const playerGoals = goals ?? stats.goals ?? 0;
   const playerAssists = assists ?? stats.assists ?? 0;
-  const playerMatches = playedMatches ?? stats.playedMatches ?? 0;
-  const playerPenalties = penalties ?? stats.penalties ?? 0;
-  const playerRating =
+  const matches = playedMatches ?? stats.playedMatches ?? 0;
+  const pens = penalties ?? stats.penalties ?? 0;
+
+  const rating =
     typeof stats.rating === "number"
       ? stats.rating.toFixed(1)
       : stats.rating || "7.5";
 
-  const isFavorited = isFavorite("players", id);
-
-  const handleCardClick = () => {
-    navigate(
-      `/player/${id}`,
-      // { state: { player } }
-    );
-  };
-
-  const getRankBadge = (r) => {
-    if (r === 1)
-      return {
-        bg: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-        label: "👑 #1",
-      };
-    if (r === 2)
-      return {
-        bg: "bg-slate-400/15 text-slate-300 border-slate-400/30",
-        label: "🥈 #2",
-      };
-    if (r === 3)
-      return {
-        bg: "bg-amber-700/15 text-amber-600 border-amber-700/30",
-        label: "🥉 #3",
-      };
-    if (r)
-      return {
-        bg: "bg-border/40 text-muted border-border/40",
-        label: `#${r}`,
-      };
-    return null;
-  };
-
-  const rankBadge = getRankBadge(rank || number);
+  const favorite = isFavorite("players", id);
+  const openPlayer = () => navigate(`/player/${id}`);
 
   return (
     <Card
-      onClick={handleCardClick}
-      className="relative flex flex-col justify-between overflow-hidden border border-border hover:border-primary/40 transition-all p-4 group cursor-pointer"
+      onClick={openPlayer}
+      className="
+      relative
+      overflow-hidden
+      cursor-pointer
+      rounded-2xl
+      border
+      border-border
+      bg-gradient-to-b
+      from-card
+      via-card
+      to-background
+      p-4
+      transition-all
+      duration-300
+      hover:-translate-y-1
+      hover:border-primary/40
+      hover:shadow-xl
+      group
+      "
     >
-      {/* Header Bar: Rank Badge & Favorite Button */}
-      <div className="flex items-center justify-between mb-3">
-        {rankBadge ? (
-          <span
-            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${rankBadge.bg}`}
-          >
-            {rankBadge.label}
+      {/* Glow */}
+      <div className="absolute -top-12 right-0 h-28 w-28 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-all" />
+
+      {/* Top Bar: Rank & Favorite */}
+      <div className="flex items-center justify-between mb-2">
+        {rank ? (
+          <span className="rounded-full bg-primary/90 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+            #{rank}
           </span>
         ) : (
           <div />
@@ -95,105 +83,99 @@ export const PlayerCard = ({ player }) => {
             e.stopPropagation();
             toggleFavorite("players", id);
           }}
-          className={`p-1.5 rounded-full hover:bg-border/30 transition-colors ${
-            isFavorited ? "text-primary" : "text-muted hover:text-text"
-          }`}
+          className="rounded-full bg-card/80 p-1.5 backdrop-blur hover:scale-110 transition z-10"
         >
-          <Star size={14} className={isFavorited ? "fill-current" : ""} />
+          <Star
+            size={14}
+            className={
+              favorite ? "fill-yellow-400 text-yellow-400" : "text-muted"
+            }
+          />
         </button>
       </div>
 
-      {/* Profile Header: Avatar & Player Details */}
-      <div className="flex items-start gap-3.5 mb-3.5">
+      {/* Player Header: Avatar + Info */}
+      <div className="flex items-center gap-3 mb-3">
         <Avatar
           src={photo}
-          fallback={name?.[0] || "⚽"}
+          fallback={name?.[0]}
           size="lg"
-          className="shrink-0 group-hover:scale-105 transition-transform border border-border/50"
+          className="shrink-0 border-2 border-primary/20 shadow-md group-hover:scale-105 transition"
         />
 
         <div className="min-w-0 flex-1 space-y-1">
-          {/* Team Crest & Name Row */}
+          <h3 className="font-black text-sm text-text truncate group-hover:text-primary transition-colors">
+            {name}
+          </h3>
+
+          {/* Club Info */}
           <div className="flex items-center gap-1.5 text-xs">
-            {crestUrl &&
-            typeof crestUrl === "string" &&
-            (crestUrl.startsWith("http") || crestUrl.startsWith("/")) ? (
+            {crest ? (
               <img
-                src={crestUrl}
+                src={crest}
                 alt={teamName}
                 className="w-4 h-4 object-contain shrink-0"
               />
             ) : (
               <Shield size={13} className="text-primary shrink-0" />
             )}
-            <span className="font-bold text-text/90 truncate">
+            <span className="text-muted truncate text-[11px] font-medium">
               {teamName || "Free Agent"}
             </span>
           </div>
 
-          <h4 className="font-display font-black text-text group-hover:text-primary transition-colors truncate text-sm">
-            {name}
-          </h4>
-
-          <div className="flex items-center gap-2 text-[10px] text-muted">
-            <span className="font-semibold px-1.5 py-0.2 rounded bg-primary/10 text-primary">
+          {/* Position & Rating Pills */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
               {position || "Player"}
             </span>
-            {nationality && <span className="truncate">• {nationality}</span>}
+            {nationality && (
+              <span className="rounded-md bg-border/40 px-2 py-0.5 text-[10px] text-muted truncate">
+                {nationality}
+              </span>
+            )}
+            <span className="ml-auto text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+              ⭐ {rating}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Stats Mini Grid */}
-      <div className="grid grid-cols-4 gap-1.5 bg-background/60 p-2.5 rounded-xl border border-border/40 mb-3 text-center text-[10px]">
-        <div>
-          <span className="block text-muted text-[9px] uppercase font-semibold">
-            Goals
-          </span>
-          <span className="font-display font-extrabold text-primary text-xs">
-            {playerGoals}
-          </span>
-        </div>
-        <div>
-          <span className="block text-muted text-[9px] uppercase font-semibold">
-            Assists
-          </span>
-          <span className="font-display font-bold text-text text-xs">
-            {playerAssists}
-          </span>
-        </div>
-        <div>
-          <span className="block text-muted text-[9px] uppercase font-semibold">
-            Matches
-          </span>
-          <span className="font-display font-bold text-text text-xs">
-            {playerMatches}
-          </span>
-        </div>
-        <div>
-          <span className="block text-muted text-[9px] uppercase font-semibold">
-            Rating
-          </span>
-          <span className="font-display font-bold text-emerald-400 text-xs">
-            {playerRating}
-          </span>
-        </div>
+      {/* Stats Grid (4 columns single compact row) */}
+      <div className="grid grid-cols-4 gap-1 bg-background/60 p-2 rounded-xl border border-border/40 mb-3 text-center">
+        <Stat title="Goals" value={playerGoals} color="text-emerald-400" />
+        <Stat title="Assists" value={playerAssists} color="text-sky-400" />
+        <Stat title="Matches" value={matches} color="text-purple-400" />
+        <Stat title="Pens" value={pens} color="text-amber-400" />
       </div>
 
-      {/* Footer Info */}
-      <div className="flex items-center justify-between border-t border-border/40 pt-2 text-[10px] text-muted">
-        <span className="flex items-center gap-1 font-medium">
-          <Target size={11} className="text-primary" />
-          {playerPenalties > 0
-            ? `${playerPenalties} Penalties`
-            : `${playerMatches} Apps`}
-        </span>
-        <span className="font-extrabold text-text">
-          {value || `${playerGoals} Goals`}
-        </span>
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-border/50 pt-2 text-xs">
+        <div>
+          <span className="text-[9px] text-muted block uppercase font-semibold">
+            Market Value
+          </span>
+          <span className="font-bold text-xs text-text">{value || "—"}</span>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs text-primary font-bold group-hover:translate-x-1 transition">
+          View
+          <ArrowRight size={13} />
+        </div>
       </div>
     </Card>
   );
 };
+
+function Stat({ title, value, color }) {
+  return (
+    <div className="py-0.5">
+      <p className="text-[9px] uppercase tracking-wider text-muted font-semibold">
+        {title}
+      </p>
+      <h4 className={`text-xs font-black ${color}`}>{value}</h4>
+    </div>
+  );
+}
 
 export default PlayerCard;
