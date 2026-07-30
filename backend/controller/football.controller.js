@@ -100,6 +100,15 @@ const getMatchDetailsController = async (req, res) => {
   }
 };
 
+const getCompetationController = async (req, res) => {
+  try {
+    const data = await footballService.getCompetation();
+    return apiResponse.success(res, "Competitions fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -108,4 +117,5 @@ module.exports = {
   getDashboardDataController,
   getLeagueDetailsController,
   getMatchDetailsController,
+  getCompetationController,
 };

@@ -69,3 +69,12 @@ export const getMatchDetailsApi = async (matchId) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getCompetationApi = async () => {
+  try {
+    const response = await axiosInstance.get(`/football/competitions`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

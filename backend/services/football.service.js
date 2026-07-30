@@ -310,6 +310,31 @@ const getMatchDetails = async (matchId) => {
   }
 };
 
+const getCompetation = async () => {
+  try {
+    const competitionCodes = ["PL", "BL1", "SA", "DED", "FL1", "PD"];
+
+    const response = await footballApi.get("/competitions");
+
+    const competitions = response.data?.competitions || [];
+    console.log("competitions", competitions);
+
+    return competitions
+      .filter((c) => competitionCodes.includes(c.code))
+      .map((c) => ({
+        id: String(c.id),
+        name: c.name,
+        code: c.code,
+        area: c.area?.name,
+        areaFlag: c.area?.flag,
+        emblem: c.emblem,
+      }));
+  } catch (error) {
+    console.error("Error fetching competitions:", error);
+    return [];
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -318,4 +343,5 @@ module.exports = {
   getDashboardData,
   getLeagueDetails,
   getMatchDetails,
+  getCompetation,
 };
