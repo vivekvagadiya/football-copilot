@@ -335,6 +335,18 @@ const getCompetation = async () => {
   }
 };
 
+const getTeamsByCompetation = async (leagueId = "PL") => {
+  try {
+    const response = await footballApi.get(`/competitions/${leagueId}/teams`);
+    console.log("response", response.data);
+    const rawTeams = response?.data?.teams;
+    return rawTeams;
+  } catch (error) {
+    console.error("Error fetching competitions:", error);
+    return [];
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -344,4 +356,5 @@ module.exports = {
   getLeagueDetails,
   getMatchDetails,
   getCompetation,
+  getTeamsByCompetation,
 };

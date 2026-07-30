@@ -17,4 +17,8 @@ router.get("/scorers", footballController.getPlayerLeaderboardController);
 router.get("/leagues/:code", footballController.getLeagueDetailsController);
 router.get("/matches/:id", footballController.getMatchDetailsController);
 router.get("/competitions", footballController.getCompetationController);
+router.get(
+  "/competitions/:leagueId/teams",
+  footballController.getTeamsByCompetationController
+);
 module.exports = router;

@@ -78,3 +78,14 @@ export const getCompetationApi = async () => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getTeamsApi = async (leagueCode) => {
+  try {
+    const response = await axiosInstance.get(
+      `/football/competitions/${leagueCode}/teams`,
+    );
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
