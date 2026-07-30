@@ -39,7 +39,11 @@ export const AppProvider = ({ children }) => {
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Apply theme to document
+  const [colorTheme, setColorTheme] = useState(() => {
+    return localStorage.getItem("colorTheme") || "green";
+  });
+
+  // Apply theme and color accent to document
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -49,8 +53,14 @@ export const AppProvider = ({ children }) => {
       root.classList.add("light");
       root.classList.remove("dark");
     }
+    root.setAttribute("data-color-theme", colorTheme);
     localStorage.setItem("theme", theme);
-  }, [theme]);
+    localStorage.setItem("colorTheme", colorTheme);
+  }, [theme, colorTheme]);
+
+  const changeColorTheme = (themeName) => {
+    setColorTheme(themeName);
+  };
 
   // Sync favorites
   useEffect(() => {
@@ -118,6 +128,8 @@ export const AppProvider = ({ children }) => {
       value={{
         theme,
         toggleTheme,
+        colorTheme,
+        changeColorTheme,
         user,
         login,
         logout,

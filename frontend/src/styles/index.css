@@ -13,6 +13,9 @@
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
 }
 
+/* ==========================================================================
+   1. PITCH GREEN (DEFAULT)
+   ========================================================================== */
 :root {
   --background: #F5F8F6;
   --card: #FFFFFF;
@@ -33,11 +36,437 @@
   --muted: #9CB4A5;
 }
 
+/* ==========================================================================
+   2. CHAMPIONS BLUE
+   ========================================================================== */
+[data-color-theme="blue"].dark,
+.dark[data-color-theme="blue"] {
+  --background: #0B132B;
+  --card: #1C2541;
+  --primary: #3B82F6;
+  --secondary: #60A5FA;
+  --border: #2A385B;
+  --text: #F1F5F9;
+  --muted: #94A3B8;
+}
+
+[data-color-theme="blue"]:root:not(.dark),
+.light[data-color-theme="blue"] {
+  --background: #F0F6FF;
+  --card: #FFFFFF;
+  --primary: #2563EB;
+  --secondary: #3B82F6;
+  --border: #BFDBFE;
+  --text: #0F172A;
+  --muted: #64748B;
+}
+
+/* ==========================================================================
+   3. CRIMSON RED
+   ========================================================================== */
+[data-color-theme="red"].dark,
+.dark[data-color-theme="red"] {
+  --background: #18080A;
+  --card: #2A0E12;
+  --primary: #EF4444;
+  --secondary: #F87171;
+  --border: #4A191F;
+  --text: #FFF5F5;
+  --muted: #B98A90;
+}
+
+[data-color-theme="red"]:root:not(.dark),
+.light[data-color-theme="red"] {
+  --background: #FFF5F5;
+  --card: #FFFFFF;
+  --primary: #DC2626;
+  --secondary: #EF4444;
+  --border: #FCA5A5;
+  --text: #18080A;
+  --muted: #7F1D1D;
+}
+
+/* ==========================================================================
+   4. TROPHY GOLD
+   ========================================================================== */
+[data-color-theme="gold"].dark,
+.dark[data-color-theme="gold"] {
+  --background: #161106;
+  --card: #271E0B;
+  --primary: #F59E0B;
+  --secondary: #FBBF24;
+  --border: #4A3915;
+  --text: #FFFBEB;
+  --muted: #B39F7A;
+}
+
+[data-color-theme="gold"]:root:not(.dark),
+.light[data-color-theme="gold"] {
+  --background: #FFFDF5;
+  --card: #FFFFFF;
+  --primary: #D97706;
+  --secondary: #F59E0B;
+  --border: #FDE68A;
+  --text: #241804;
+  --muted: #92400E;
+}
+
+/* ==========================================================================
+   5. CYBER PURPLE
+   ========================================================================== */
+[data-color-theme="purple"].dark,
+.dark[data-color-theme="purple"] {
+  --background: #0F0B1E;
+  --card: #1A1333;
+  --primary: #A855F7;
+  --secondary: #C084FC;
+  --border: #35265E;
+  --text: #F8F5FF;
+  --muted: #A79BBF;
+}
+
+[data-color-theme="purple"]:root:not(.dark),
+.light[data-color-theme="purple"] {
+  --background: #FAF5FF;
+  --card: #FFFFFF;
+  --primary: #7C3AED;
+  --secondary: #9333EA;
+  --border: #E9D5FF;
+  --text: #1E1B4B;
+  --muted: #6B21A8;
+}
+
+/* ==========================================================================
+   6. NEON ICE CYAN
+   ========================================================================== */
+[data-color-theme="cyan"].dark,
+.dark[data-color-theme="cyan"] {
+  --background: #05151A;
+  --card: #0A252E;
+  --primary: #06B6D4;
+  --secondary: #22D3EE;
+  --border: #164654;
+  --text: #F0FDF4;
+  --muted: #76A6B4;
+}
+
+[data-color-theme="cyan"]:root:not(.dark),
+.light[data-color-theme="cyan"] {
+  --background: #F0FDFF;
+  --card: #FFFFFF;
+  --primary: #0891B2;
+  --secondary: #06B6D4;
+  --border: #A5F3FC;
+  --text: #083344;
+  --muted: #155E75;
+}
+
+/* ==========================================================================
+   7. SUNSET ORANGE
+   ========================================================================== */
+[data-color-theme="orange"].dark,
+.dark[data-color-theme="orange"] {
+  --background: #1C0D02;
+  --card: #2E1807;
+  --primary: #F97316;
+  --secondary: #FB923C;
+  --border: #4D290F;
+  --text: #FFF7ED;
+  --muted: #C29F84;
+}
+
+[data-color-theme="orange"]:root:not(.dark),
+.light[data-color-theme="orange"] {
+  --background: #FFF7ED;
+  --card: #FFFFFF;
+  --primary: #EA580C;
+  --secondary: #F97316;
+  --border: #FFEDD5;
+  --text: #1C0D02;
+  --muted: #9A3412;
+}
+
+/* ==========================================================================
+   8. CYBER MAGENTA / PINK
+   ========================================================================== */
+[data-color-theme="pink"].dark,
+.dark[data-color-theme="pink"] {
+  --background: #180612;
+  --card: #2B0E21;
+  --primary: #EC4899;
+  --secondary: #F472B6;
+  --border: #4D1B3C;
+  --text: #FDF2F8;
+  --muted: #C48AA8;
+}
+
+[data-color-theme="pink"]:root:not(.dark),
+.light[data-color-theme="pink"] {
+  --background: #FDF2F8;
+  --card: #FFFFFF;
+  --primary: #DB2777;
+  --secondary: #EC4899;
+  --border: #FCE7F3;
+  --text: #180612;
+  --muted: #9D174D;
+}
+
+/* ==========================================================================
+   9. JADE MINT / EMERALD
+   ========================================================================== */
+[data-color-theme="emerald"].dark,
+.dark[data-color-theme="emerald"] {
+  --background: #041814;
+  --card: #0A2B24;
+  --primary: #10B981;
+  --secondary: #34D399;
+  --border: #154F42;
+  --text: #ECFDF5;
+  --muted: #77AFA1;
+}
+
+[data-color-theme="emerald"]:root:not(.dark),
+.light[data-color-theme="emerald"] {
+  --background: #ECFDF5;
+  --card: #FFFFFF;
+  --primary: #059669;
+  --secondary: #10B981;
+  --border: #A7F3D0;
+  --text: #041814;
+  --muted: #047857;
+}
+
+/* ==========================================================================
+   10. DEEP TEAL OCEAN
+   ========================================================================== */
+[data-color-theme="teal"].dark,
+.dark[data-color-theme="teal"] {
+  --background: #031A18;
+  --card: #082926;
+  --primary: #14B8A6;
+  --secondary: #2DD4BF;
+  --border: #11453F;
+  --text: #F0FDFA;
+  --muted: #73A8A0;
+}
+
+[data-color-theme="teal"]:root:not(.dark),
+.light[data-color-theme="teal"] {
+  --background: #F0FDFA;
+  --card: #FFFFFF;
+  --primary: #0D9488;
+  --secondary: #14B8A6;
+  --border: #99F6E4;
+  --text: #042F2C;
+  --muted: #115E59;
+}
+
+/* ==========================================================================
+   11. MIDNIGHT INDIGO
+   ========================================================================== */
+[data-color-theme="indigo"].dark,
+.dark[data-color-theme="indigo"] {
+  --background: #0B0E28;
+  --card: #151A42;
+  --primary: #6366F1;
+  --secondary: #818CF8;
+  --border: #2A326D;
+  --text: #EEF2FF;
+  --muted: #9099D6;
+}
+
+[data-color-theme="indigo"]:root:not(.dark),
+.light[data-color-theme="indigo"] {
+  --background: #EEF2FF;
+  --card: #FFFFFF;
+  --primary: #4F46E5;
+  --secondary: #6366F1;
+  --border: #C7D2FE;
+  --text: #1E1B4B;
+  --muted: #3730A3;
+}
+
+/* ==========================================================================
+   12. DEEP VELVET VIOLET
+   ========================================================================== */
+[data-color-theme="violet"].dark,
+.dark[data-color-theme="violet"] {
+  --background: #130924;
+  --card: #22123B;
+  --primary: #8B5CF6;
+  --secondary: #A78BFA;
+  --border: #3F2369;
+  --text: #F5F3FF;
+  --muted: #A592C9;
+}
+
+[data-color-theme="violet"]:root:not(.dark),
+.light[data-color-theme="violet"] {
+  --background: #F5F3FF;
+  --card: #FFFFFF;
+  --primary: #7C3AED;
+  --secondary: #8B5CF6;
+  --border: #DDD6FE;
+  --text: #2E1065;
+  --muted: #5B21B6;
+}
+
+/* ==========================================================================
+   13. NORDIC ROSE
+   ========================================================================== */
+[data-color-theme="rose"].dark,
+.dark[data-color-theme="rose"] {
+  --background: #1F0B13;
+  --card: #331422;
+  --primary: #F43F5E;
+  --secondary: #FB7185;
+  --border: #54223A;
+  --text: #FFF1F2;
+  --muted: #C994A3;
+}
+
+[data-color-theme="rose"]:root:not(.dark),
+.light[data-color-theme="rose"] {
+  --background: #FFF1F2;
+  --card: #FFFFFF;
+  --primary: #E11D48;
+  --secondary: #F43F5E;
+  --border: #FECDD3;
+  --text: #4C0519;
+  --muted: #9F1239;
+}
+
+/* ==========================================================================
+   14. WARM HONEY AMBER
+   ========================================================================== */
+[data-color-theme="amber"].dark,
+.dark[data-color-theme="amber"] {
+  --background: #1A1103;
+  --card: #2E1F07;
+  --primary: #D97706;
+  --secondary: #F59E0B;
+  --border: #4F350E;
+  --text: #FFFBEB;
+  --muted: #B89C6F;
+}
+
+[data-color-theme="amber"]:root:not(.dark),
+.light[data-color-theme="amber"] {
+  --background: #FFFBEB;
+  --card: #FFFFFF;
+  --primary: #B45309;
+  --secondary: #D97706;
+  --border: #FDE68A;
+  --text: #451A03;
+  --muted: #78350F;
+}
+
+/* ==========================================================================
+   15. NEON PITCH LIME
+   ========================================================================== */
+[data-color-theme="lime"].dark,
+.dark[data-color-theme="lime"] {
+  --background: #0E1704;
+  --card: #1A2909;
+  --primary: #84CC16;
+  --secondary: #A3E635;
+  --border: #314D11;
+  --text: #F7FEE7;
+  --muted: #9BB379;
+}
+
+[data-color-theme="lime"]:root:not(.dark),
+.light[data-color-theme="lime"] {
+  --background: #F7FEE7;
+  --card: #FFFFFF;
+  --primary: #65A30D;
+  --secondary: #84CC16;
+  --border: #D9F99D;
+  --text: #1A2E05;
+  --muted: #3F6212;
+}
+
+/* ==========================================================================
+   16. SKY BLUE BREEZE
+   ========================================================================== */
+[data-color-theme="sky"].dark,
+.dark[data-color-theme="sky"] {
+  --background: #051525;
+  --card: #0B253D;
+  --primary: #0EA5E9;
+  --secondary: #38BDF8;
+  --border: #154169;
+  --text: #F0F9FF;
+  --muted: #75A6C9;
+}
+
+[data-color-theme="sky"]:root:not(.dark),
+.light[data-color-theme="sky"] {
+  --background: #F0F9FF;
+  --card: #FFFFFF;
+  --primary: #0284C7;
+  --secondary: #0EA5E9;
+  --border: #BAE6FD;
+  --text: #0C4A6E;
+  --muted: #0369A1;
+}
+
+/* ==========================================================================
+   17. NEON FUCHSIA GLOW
+   ========================================================================== */
+[data-color-theme="fuchsia"].dark,
+.dark[data-color-theme="fuchsia"] {
+  --background: #1B061D;
+  --card: #300D34;
+  --primary: #D946EF;
+  --secondary: #E879F9;
+  --border: #531859;
+  --text: #FDF4FF;
+  --muted: #C28BBF;
+}
+
+[data-color-theme="fuchsia"]:root:not(.dark),
+.light[data-color-theme="fuchsia"] {
+  --background: #FDF4FF;
+  --card: #FFFFFF;
+  --primary: #C026D3;
+  --secondary: #D946EF;
+  --border: #F5D0FE;
+  --text: #4A044E;
+  --muted: #86198F;
+}
+
+/* ==========================================================================
+   18. MONOCHROME CARBON (OLED BLACK & WHITE)
+   ========================================================================== */
+[data-color-theme="monochrome"].dark,
+.dark[data-color-theme="monochrome"] {
+  --background: #09090B;
+  --card: #18181B;
+  --primary: #F4F4F5;
+  --secondary: #E4E4E7;
+  --border: #27272A;
+  --text: #FAFAFA;
+  --muted: #A1A1AA;
+}
+
+[data-color-theme="monochrome"]:root:not(.dark),
+.light[data-color-theme="monochrome"] {
+  --background: #FAFAFA;
+  --card: #FFFFFF;
+  --primary: #18181B;
+  --secondary: #27272A;
+  --border: #E4E4E7;
+  --text: #09090B;
+  --muted: #71717A;
+}
+
 @layer base {
   body {
     background-color: var(--background);
     color: var(--text);
     font-family: var(--font-sans);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
@@ -74,7 +503,7 @@
 }
 
 .dark .glass-card {
-  background: rgba(13, 27, 21, 0.45);
+  background: var(--card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border);
@@ -90,7 +519,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 15px rgba(46, 204, 113, 0.15);
+  box-shadow: 0 0 15px var(--primary);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -101,11 +530,7 @@
 
 /* Premium gradient backgrounds */
 .hero-gradient {
-  background: radial-gradient(circle at 50% -20%, rgba(46, 204, 113, 0.15) 0%, rgba(7, 18, 13, 0) 60%);
-}
-
-.light .hero-gradient {
-  background: radial-gradient(circle at 50% -20%, rgba(31, 157, 85, 0.08) 0%, rgba(245, 248, 246, 0) 65%);
+  background: radial-gradient(circle at 50% -20%, var(--primary) 0%, rgba(0, 0, 0, 0) 65%);
 }
 
 /* Sidebar transitions */

@@ -334,7 +334,7 @@ const getMatchDetails = async (matchId) => {
 
 const getCompetation = async () => {
   try {
-    const competitionCodes = ["PL", "BL1", "SA", "DED", "FL1", "PD"];
+    const competitionCodes = ["PL", "PD", "BL1", "FL1", "SA", "CL"];
 
     const response = await footballApi.get("/competitions");
 
