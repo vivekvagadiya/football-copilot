@@ -52,18 +52,18 @@ export const DashboardLayout = () => {
   const currentActiveItem = menuItems.find(item => location.pathname.startsWith(item.path)) || { name: 'Football Copilot' };
 
   return (
-    <div className="min-h-screen bg-background text-text transition-colors duration-200 flex flex-col md:flex-row overflow-x-hidden">
+    <div className="h-screen w-screen overflow-hidden bg-background text-text transition-colors duration-200 flex flex-col md:flex-row">
       {/* Search Command Modal */}
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Desktop Sidebar (Left) */}
       <aside 
-        className={`hidden md:flex flex-col h-screen sticky top-0 border-r border-border bg-card shrink-0 sidebar-transition z-30 ${
+        className={`hidden md:flex flex-col h-screen border-r border-border bg-card shrink-0 sidebar-transition z-30 ${
           isSidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       >
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-border/70">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border/70 shrink-0">
           <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
             <Cpu className="text-primary shrink-0" size={24} />
             {!isSidebarCollapsed && (
@@ -153,9 +153,9 @@ export const DashboardLayout = () => {
       </aside>
 
       {/* Main Layout Container */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-16 border-b border-border bg-card/60 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-20">
+        <header className="h-16 shrink-0 border-b border-border bg-card/60 backdrop-blur-md flex items-center justify-between px-4 z-20">
           <div className="flex items-center gap-3">
             {/* Mobile menu trigger */}
             <button 
@@ -199,8 +199,8 @@ export const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* Scrollable Dashboard View */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+        {/* Scrollable Main Content View */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background min-h-0">
           <Outlet />
         </main>
       </div>

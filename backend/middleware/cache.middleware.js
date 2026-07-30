@@ -17,8 +17,9 @@ const cacheMiddleware = (ttlInSeconds = 300) => {
       return next();
     }
 
-    // Construct a unique cache key based on route & query parameters
-    const cacheKey = `cache:${req.originalUrl}`;
+    // Construct a unique cache key (user-scoped if authenticated)
+    const userPrefix = req.user ? `${req.user._id}:` : "";
+    const cacheKey = `cache:${userPrefix}${req.originalUrl}`;
 
     try {
       // 1. Check if data exists in Redis cache

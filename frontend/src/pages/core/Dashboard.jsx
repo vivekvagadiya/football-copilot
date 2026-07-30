@@ -65,7 +65,7 @@ export const Dashboard = () => {
       staleTime: 600000,
     });
 
-  const upcomingMatches = upcomingMatchesRaw.slice(0, 4);
+  const upcomingMatches = upcomingMatchesRaw.slice(0, 10);
 
   // Fetch standings preview - cache for 30 minutes (Option B)
   const { data: plTeamsRaw = [], isLoading: loadingStandings } = useQuery({
