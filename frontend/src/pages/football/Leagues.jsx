@@ -7,9 +7,12 @@ import { Loading } from "../../components/ui/Loading";
 import { Card } from "../../components/ui/Card";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
 import { getCompetationApi } from "../../api/football.api";
+import { useApp } from "../../context/AppContext";
+import FavoriteButton from "../../components/common/FavoriteButton";
 
 export const Leagues = () => {
   const navigate = useNavigate();
+  const { isFavorite } = useApp();
 
   const { data: leagues = [], isLoading } = useQuery({
     queryKey: ["leagues"],
@@ -35,34 +38,53 @@ export const Leagues = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {leagues.map((l) => {
           const filter = LEAGUE_FILTERS.find((f) => f.code.toUpperCase() === l.code.toUpperCase()) || {};
+          const isLeagueFavorited = isFavorite("leagues", l.code);
+
           return (
             <Card
               key={l.code}
               onClick={() => navigate(`/league/${l.code}`)}
-              className="border border-border hover:border-primary/40 transition-all p-5 flex flex-col justify-between group cursor-pointer"
+              className="relative border border-border hover:border-primary/40 transition-all p-5 flex flex-col justify-between group cursor-pointer"
             >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-full p-1 shadow-sm shrink-0 border border-border/40">
-                  <img
-                    src={l.emblem || filter.logo}
-                    alt=""
-                    className="w-full h-full object-contain"
-                  />
+              <div className="flex items-start justify-between gap-4 mb-4 pr-6">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 flex items-center justify-center bg-white rounded-full p-1 shadow-sm shrink-0 border border-border/40">
+                    <img
+                      src={l.emblem || filter.logo}
+                      alt=""
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-display font-bold text-text group-hover:text-primary transition-colors text-sm truncate">
+                      {l.name}
+                    </h3>
+                    <p className="text-[10px] text-muted flex items-center gap-1.5 mt-0.5 truncate">
+                      {l.areaFlag && (
+                        <img
+                          src={l.areaFlag}
+                          alt=""
+                          className="w-4 h-2.5 object-contain rounded-sm shrink-0 border border-border/10 shadow-sm"
+                        />
+                      )}
+                      {l.area}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-display font-bold text-text group-hover:text-primary transition-colors text-sm">
-                    {l.name}
-                  </h3>
-                  <p className="text-[10px] text-muted flex items-center gap-1.5 mt-0.5">
-                    {l.areaFlag && (
-                      <img
-                        src={l.areaFlag}
-                        alt=""
-                        className="w-4 h-2.5 object-contain rounded-sm shrink-0 border border-border/10 shadow-sm"
-                      />
-                    )}
-                    {l.area}
-                  </p>
+
+                <div className="absolute top-3 right-3 z-10">
+                  <FavoriteButton
+                    itemType="LEAGUE"
+                    externalId={l.code}
+                    iconType="star"
+                    meta={{
+                      name: l.name,
+                      badgeUrl: l.emblem || filter.logo || "",
+                      subtitle: l.area || "",
+                    }}
+                    isFavoriteInitial={isLeagueFavorited}
+                    size={16}
+                  />
                 </div>
               </div>
 

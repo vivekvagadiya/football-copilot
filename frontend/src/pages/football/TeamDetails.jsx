@@ -37,6 +37,7 @@ import { Avatar } from "../../components/ui/Avatar";
 import { Badge } from "../../components/ui/Badge";
 import { FixtureCard } from "../../components/football/FixtureCard";
 import { useApp } from "../../context/AppContext";
+import FavoriteButton from "../../components/common/FavoriteButton";
 
 export const TeamDetails = () => {
   const { id } = useParams();
@@ -44,7 +45,7 @@ export const TeamDetails = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("squad");
   const [positionFilter, setPositionFilter] = useState("ALL");
-  const { toggleFavorite, isFavorite } = useApp();
+  const { isFavorite } = useApp();
 
   const stateTeam = location.state?.team;
 
@@ -213,17 +214,18 @@ export const TeamDetails = () => {
                     {tla}
                   </span>
                 )}
-                <button
-                  onClick={() => toggleFavorite("teams", id)}
-                  className={`p-1.5 rounded-full hover:bg-border/30 transition-colors ${
-                    isFavorited ? "text-primary" : "text-muted hover:text-text"
-                  }`}
-                >
-                  <Star
-                    size={16}
-                    className={isFavorited ? "fill-current" : ""}
-                  />
-                </button>
+                <FavoriteButton
+                  itemType="TEAM"
+                  externalId={id}
+                  iconType="star"
+                  meta={{
+                    name: name || "Team",
+                    badgeUrl: teamCrest || "",
+                    subtitle: venueName !== "N/A" ? venueName : "",
+                  }}
+                  isFavoriteInitial={isFavorited}
+                  size={16}
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted mt-1.5">

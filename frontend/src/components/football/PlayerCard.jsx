@@ -5,6 +5,7 @@ import { Star, Shield, ArrowRight } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Avatar } from "../ui/Avatar";
 import { useApp } from "../../context/AppContext";
+import FavoriteButton from "../common/FavoriteButton";
 
 export const PlayerCard = ({ player }) => {
   const navigate = useNavigate();
@@ -78,20 +79,18 @@ export const PlayerCard = ({ player }) => {
           <div />
         )}
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFavorite("players", id);
+        <FavoriteButton
+          itemType="PLAYER"
+          externalId={id}
+          iconType="star"
+          meta={{
+            name: name || "Player",
+            badgeUrl: photo || crest || "",
+            subtitle: `${position || "Player"}${teamName ? ` • ${teamName}` : ""}`,
           }}
-          className="rounded-full bg-card/80 p-1.5 backdrop-blur hover:scale-110 transition z-10"
-        >
-          <Star
-            size={14}
-            className={
-              favorite ? "fill-yellow-400 text-yellow-400" : "text-muted"
-            }
-          />
-        </button>
+          isFavoriteInitial={favorite}
+          size={15}
+        />
       </div>
 
       {/* Player Header: Avatar + Info */}

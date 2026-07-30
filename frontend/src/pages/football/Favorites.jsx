@@ -1,84 +1,186 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Star, Shield, User } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { apiService } from '../../services/apiService';
-import { Loading } from '../../components/ui/Loading';
-import { Card } from '../../components/ui/Card';
-import { TeamCard } from '../../components/football/TeamCard';
-import { PlayerCard } from '../../components/football/PlayerCard';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { Star, Shield, User, Trophy, Calendar, ExternalLink } from "lucide-react";
+import { getFavoritesApi } from "../../api/favorite.api";
+import { Loading } from "../../components/ui/Loading";
+import { Card } from "../../components/ui/Card";
+import FavoriteButton from "../../components/common/FavoriteButton";
 
 export const Favorites = () => {
-  const { favorites } = useApp();
+  const navigate = useNavigate();
+  const [activeCategory, setActiveCategory] = useState("ALL");
 
-  const { data: teams = [], isLoading: loadingTeams } = useQuery({
-    queryKey: ['teams'],
-    queryFn: apiService.getTeams
+  // Fetch full user favorites list from backend (cached via Redis)
+  const { data: resData, isLoading, refetch } = useQuery({
+    queryKey: ["user-favorites"],
+    queryFn: getFavoritesApi,
+    staleTime: 300000,
   });
 
-  const { data: players = [], isLoading: loadingPlayers } = useQuery({
-    queryKey: ['players'],
-    queryFn: apiService.getPlayers
-  });
+  const favoritesList = resData?.data || [];
 
-  const favTeams = teams.filter(t => favorites.teams.includes(t.id));
-  const favPlayers = players.filter(p => favorites.players.includes(p.id));
+  const teams = favoritesList.filter((item) => item.itemType === "TEAM");
+  const players = favoritesList.filter((item) => item.itemType === "PLAYER");
+  const matches = favoritesList.filter((item) => item.itemType === "MATCH");
+  const leagues = favoritesList.filter((item) => item.itemType === "LEAGUE");
 
-  const isLoading = loadingTeams || loadingPlayers;
+  const categoryCounts = {
+    ALL: favoritesList.length,
+    TEAM: teams.length,
+    PLAYER: players.length,
+    MATCH: matches.length,
+    LEAGUE: leagues.length,
+  };
+
+  const filteredItems =
+    activeCategory === "ALL"
+      ? favoritesList
+      : favoritesList.filter((item) => item.itemType === activeCategory);
+
+  const getItemRoute = (itemType, externalId) => {
+    switch (itemType) {
+      case "TEAM":
+        return `/team/${externalId}`;
+      case "PLAYER":
+        return `/player/${externalId}`;
+      case "MATCH":
+        return `/match/${externalId}`;
+      case "LEAGUE":
+        return `/league/${externalId}`;
+      default:
+        return "#";
+    }
+  };
+
+  const getCategoryIcon = (itemType) => {
+    switch (itemType) {
+      case "TEAM":
+        return <Shield size={14} className="text-primary" />;
+      case "PLAYER":
+        return <User size={14} className="text-sky-400" />;
+      case "MATCH":
+        return <Calendar size={14} className="text-amber-400" />;
+      case "LEAGUE":
+        return <Trophy size={14} className="text-purple-400" />;
+      default:
+        return <Star size={14} className="text-amber-400" />;
+    }
+  };
 
   if (isLoading) {
-    return <Loading text="Retrieving bookmarked dossiers..." />;
+    return <Loading text="Fetching your favorited dossiers from Redis cache..." />;
   }
-
-  const hasFavorites = favTeams.length > 0 || favPlayers.length > 0;
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-border/40 pb-4">
-        <h2 className="font-display font-extrabold text-lg text-text flex items-center gap-2">
-          <Star size={18} className="text-primary fill-current" /> Favorites Console
-        </h2>
-        <p className="text-xs text-muted">Quick access to bookmarked teams, players, and custom scout lists.</p>
+      {/* Header */}
+      <div className="border-b border-border/40 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display font-black text-xl text-text flex items-center gap-2">
+            <Star size={20} className="text-amber-400 fill-amber-400" /> Favorites Dashboard
+          </h2>
+          <p className="text-xs text-muted mt-1">
+            Your personalized collection of bookmarked clubs, players, and match telemetry.
+          </p>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {["ALL", "TEAM", "PLAYER", "MATCH", "LEAGUE"].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeCategory === cat
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-border/30 text-muted hover:text-text hover:bg-border/60"
+              }`}
+            >
+              {cat === "ALL" ? "All Items" : `${cat}s`} ({categoryCounts[cat] || 0})
+            </button>
+          ))}
+        </div>
       </div>
 
-      {!hasFavorites ? (
-        <Card className="text-center py-16 text-xs text-muted border-dashed border-border space-y-2">
-          <Star size={32} className="mx-auto text-border" />
-          <p className="font-semibold text-text">No favorites bookmarked.</p>
-          <p>Click the star icon on any player profile or club card to pin it here.</p>
+      {/* Empty State */}
+      {favoritesList.length === 0 ? (
+        <Card className="text-center py-16 text-xs text-muted border-dashed border-border space-y-3">
+          <Star size={36} className="mx-auto text-amber-400/40 animate-pulse" />
+          <p className="font-extrabold text-sm text-text">No favorites bookmarked yet.</p>
+          <p className="max-w-md mx-auto text-muted">
+            Click the ⭐ Star icon on any Team card, Player profile, or Match fixture to pin it to your personal dashboard.
+          </p>
+        </Card>
+      ) : filteredItems.length === 0 ? (
+        <Card className="text-center py-12 text-xs text-muted border-dashed border-border">
+          No favorited {activeCategory.toLowerCase()}s found in your collection.
         </Card>
       ) : (
-        <div className="space-y-6">
-          {/* Favorite Clubs */}
-          {favTeams.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-display font-bold text-xs text-text flex items-center gap-1.5 px-1 uppercase tracking-wider text-muted">
-                <Shield size={12} /> Bookmarked Clubs
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favTeams.map(t => (
-                  <TeamCard key={t.id} team={t} />
-                ))}
-              </div>
-            </div>
-          )}
+        /* Favorites Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredItems.map((fav) => {
+            const { _id, itemType, externalId, meta } = fav;
+            const route = getItemRoute(itemType, externalId);
 
-          {/* Favorite Players */}
-          {favPlayers.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-display font-bold text-xs text-text flex items-center gap-1.5 px-1 uppercase tracking-wider text-muted">
-                <User size={12} /> Bookmarked Players
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favPlayers.map(p => (
-                  <PlayerCard key={p.id} player={p} />
-                ))}
-              </div>
-            </div>
-          )}
+            return (
+              <Card
+                key={_id || `${itemType}-${externalId}`}
+                onClick={() => navigate(route)}
+                className="relative flex items-center justify-between p-4 border border-border/70 hover:border-primary/40 transition-all cursor-pointer group hover:-translate-y-0.5 shadow-sm"
+              >
+                <div className="flex items-center gap-3.5 min-w-0 pr-8">
+                  {/* Badge Image / Fallback Icon */}
+                  <div className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-xl p-1.5 border border-border/50 shrink-0">
+                    {meta?.badgeUrl ? (
+                      <img
+                        src={meta.badgeUrl}
+                        alt={meta.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      getCategoryIcon(itemType)
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted px-1.5 py-0.5 rounded bg-border/40">
+                        {itemType}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-sm text-text group-hover:text-primary transition-colors truncate mt-1">
+                      {meta?.name || "Unnamed Item"}
+                    </h4>
+                    {meta?.subtitle && (
+                      <p className="text-[11px] text-muted truncate mt-0.5">
+                        {meta.subtitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Action: Un-favorite & Navigate */}
+                <div className="flex items-center gap-1 shrink-0 z-10">
+                  <FavoriteButton
+                    itemType={itemType}
+                    externalId={externalId}
+                    iconType="star"
+                    meta={meta}
+                    isFavoriteInitial={true}
+                    onToggleSuccess={() => refetch()}
+                    size={16}
+                  />
+                  <ExternalLink size={14} className="text-muted group-hover:text-primary transition-colors ml-1" />
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
+
 export default Favorites;

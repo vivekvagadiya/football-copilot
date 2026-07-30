@@ -37,12 +37,13 @@ import { Card } from "../../components/ui/Card";
 import { Avatar } from "../../components/ui/Avatar";
 import { Tabs } from "../../components/ui/Tabs";
 import { useApp } from "../../context/AppContext";
+import FavoriteButton from "../../components/common/FavoriteButton";
 
 export const PlayerProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("club");
-  const { toggleFavorite, isFavorite } = useApp();
+  const { isFavorite } = useApp();
 
   // Permanent API Call for Live Player Details
   const { data: player, isLoading, error } = useQuery({
@@ -159,14 +160,18 @@ export const PlayerProfile = () => {
                     #{playerShirtNumber}
                   </span>
                 )}
-                <button
-                  onClick={() => toggleFavorite("players", id)}
-                  className={`p-1.5 rounded-full hover:bg-border/30 transition-colors ${
-                    isFavorited ? "text-primary" : "text-muted hover:text-text"
-                  }`}
-                >
-                  <Star size={16} className={isFavorited ? "fill-current" : ""} />
-                </button>
+                <FavoriteButton
+                  itemType="PLAYER"
+                  externalId={id}
+                  iconType="star"
+                  meta={{
+                    name: name || "Player",
+                    badgeUrl: player.photo || clubCrest || "",
+                    subtitle: `${activePosition}${clubName ? ` • ${clubName}` : ""}`,
+                  }}
+                  isFavoriteInitial={isFavorited}
+                  size={16}
+                />
               </div>
             </div>
 
