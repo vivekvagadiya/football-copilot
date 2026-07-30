@@ -2,25 +2,28 @@ const express = require("express");
 const router = express.Router();
 const footballController = require("../controller/football.controller");
 const authenticate = require("../middleware/auth.middleware");
+const cacheMiddleware = require("../middleware/cache.middleware");
 
 // Require authentication for all football routes
 router.use(authenticate);
 
-router.get("/dashboard", footballController.getDashboardDataController);
-router.get("/matches/live", footballController.getLiveMatchesController);
+router.get("/dashboard", cacheMiddleware(60), footballController.getDashboardDataController);
+router.get("/matches/live", cacheMiddleware(30), footballController.getLiveMatchesController);
 router.get(
   "/matches/upcoming",
+  cacheMiddleware(300),
   footballController.getUpcomingMatchesController,
 );
-router.get("/standings", footballController.getStandingController);
-router.get("/scorers", footballController.getPlayerLeaderboardController);
-router.get("/leagues/:code", footballController.getLeagueDetailsController);
-router.get("/matches/:id", footballController.getMatchDetailsController);
-router.get("/competitions", footballController.getCompetationController);
+router.get("/standings", cacheMiddleware(300), footballController.getStandingController);
+router.get("/scorers", cacheMiddleware(600), footballController.getPlayerLeaderboardController);
+router.get("/leagues/:code", cacheMiddleware(600), footballController.getLeagueDetailsController);
+router.get("/matches/:id", cacheMiddleware(180), footballController.getMatchDetailsController);
+router.get("/competitions", cacheMiddleware(900), footballController.getCompetationController);
 router.get(
   "/competitions/:leagueId/teams",
+  cacheMiddleware(600),
   footballController.getTeamsByCompetationController
 );
-router.get("/players/:id", footballController.getPlayerDetailsController);
-router.get("/teams/:id", footballController.getTeamDetailsController);
+router.get("/players/:id", cacheMiddleware(900), footballController.getPlayerDetailsController);
+router.get("/teams/:id", cacheMiddleware(900), footballController.getTeamDetailsController);
 module.exports = router;

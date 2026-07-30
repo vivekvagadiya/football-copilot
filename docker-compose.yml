@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # 1. Redis Cache Service
+  redis:
+    image: redis:alpine
+    container_name: football_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  # 2. Express Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: football_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      # Replace with your actual MongoDB URI or local connection string if running Mongo locally
+      - MONGO_URI=${MONGO_URI:-mongodb://host.docker.internal:27017/football-copilot}
+    depends_on:
+      - redis
+    restart: unless-stopped
