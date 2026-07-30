@@ -89,3 +89,12 @@ export const getTeamsApi = async (leagueCode) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getPlayerDetailsApi = async (playerId) => {
+  try {
+    const response = await axiosInstance.get(`/football/players/${playerId}`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

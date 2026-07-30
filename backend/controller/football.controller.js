@@ -122,6 +122,19 @@ const getTeamsByCompetationController = async (req, res) => {
   }
 };
 
+const getPlayerDetailsController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return apiResponse.error(res, "Player ID is required", 400);
+    }
+    const data = await footballService.getPlayerDetails(id);
+    return apiResponse.success(res, "Player details fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -132,4 +145,5 @@ module.exports = {
   getMatchDetailsController,
   getCompetationController,
   getTeamsByCompetationController,
+  getPlayerDetailsController,
 };

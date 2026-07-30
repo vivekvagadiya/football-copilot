@@ -205,16 +205,13 @@ const upcomingMatches = async (
   }
 };
 
-const playerLeaderboard = async (
-  competition = "PL",
-  season = 2025,
-  limit = 10,
-) => {
+const playerLeaderboard = async (competition = "PL", season, limit = 20) => {
   try {
     const params = {
-      season,
       limit,
     };
+    if (season) params.season = season;
+
     const playerRes = await footballApi.get(
       `/competitions/${competition}/scorers`,
       {
@@ -222,16 +219,41 @@ const playerLeaderboard = async (
       },
     );
     const rawScorers = playerRes.data?.scorers || [];
-    return rawScorers.map((item) => ({
-      id: item.player.id.toString(),
-      name: item.player.name,
-      flag: item.team.crest,
-      teamName: item.team.shortName || item.team.name,
-      position: item.player.position || "Forward",
-      stats: {
-        goals: item.goals,
-      },
-    }));
+    return rawScorers.map((item, index) => {
+      const goals = item.goals || 0;
+      const assists = item.assists || 0;
+      const playedMatches = item.playedMatches || 0;
+      const penalties = item.penalties || 0;
+      const rating = Number(
+        Math.min(9.8, 7.2 + goals * 0.25 + (assists || 0) * 0.15).toFixed(2),
+      );
+
+      return {
+        id: item.player.id.toString(),
+        rank: index + 1,
+        name: item.player.name,
+        photo: null,
+        flag: item.team.crest || "",
+        teamName: item.team.shortName || item.team.name,
+        teamCrest: item.team.crest || "",
+        position: item.player.position || "Offence",
+        number: index + 1,
+        nationality: item.player.nationality || item.team.area?.name || "",
+        dateOfBirth: item.player.dateOfBirth || "",
+        goals,
+        assists,
+        playedMatches,
+        penalties,
+        value: `${goals} Goals`,
+        stats: {
+          goals,
+          assists,
+          playedMatches,
+          penalties,
+          rating,
+        },
+      };
+    });
   } catch (err) {
     console.error(
       "⚠️ [football.service] playerLeaderboard API failed, falling back to mock:",
@@ -347,6 +369,58 @@ const getTeamsByCompetation = async (leagueId = "PL") => {
   }
 };
 
+const getPlayerDetails = async (personId) => {
+  try {
+    const response = await footballApi.get(`/persons/${personId}`);
+    console.log("response", response.data);
+    const data = response.data;
+    if (!data) return null;
+
+    return {
+      id: String(data.id),
+      name: data.name,
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      dateOfBirth: data.dateOfBirth || "",
+      nationality: data.nationality || "",
+      section: data.section || "",
+      position: data.position || data.section || "Player",
+      shirtNumber: data.shirtNumber || null,
+      number: data.shirtNumber || null,
+      lastUpdated: data.lastUpdated || "",
+      teamName: data.currentTeam?.shortName || data.currentTeam?.name || "N/A",
+      teamCrest: data.currentTeam?.crest || "",
+      flag: data.currentTeam?.area?.flag || data.currentTeam?.crest || "",
+      currentTeam: data.currentTeam
+        ? {
+            id: data.currentTeam.id,
+            name: data.currentTeam.name,
+            shortName: data.currentTeam.shortName || data.currentTeam.name,
+            tla: data.currentTeam.tla || "",
+            crest: data.currentTeam.crest || "",
+            address: data.currentTeam.address || "",
+            website: data.currentTeam.website || "",
+            founded: data.currentTeam.founded || null,
+            clubColors: data.currentTeam.clubColors || "",
+            venue: data.currentTeam.venue || "",
+            area: data.currentTeam.area || null,
+            runningCompetitions: data.currentTeam.runningCompetitions || [],
+            contract: data.currentTeam.contract || null,
+          }
+        : null,
+      stats: {
+        goals: data.goals || 0,
+        assists: data.assists || 0,
+        playedMatches: data.playedMatches || 0,
+        rating: 7.5,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching player details:", error);
+    return null;
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -357,4 +431,5 @@ module.exports = {
   getMatchDetails,
   getCompetation,
   getTeamsByCompetation,
+  getPlayerDetails,
 };

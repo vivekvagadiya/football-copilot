@@ -63,7 +63,9 @@ export const TeamDetails = () => {
     return (
       <div className="text-center py-16 space-y-4">
         <Shield size={40} className="mx-auto text-muted/40" />
-        <p className="text-muted text-sm">Club details could not be retrieved.</p>
+        <p className="text-muted text-sm">
+          Club details could not be retrieved.
+        </p>
         <button
           onClick={() => navigate("/teams")}
           className="text-primary hover:underline text-xs font-bold"
@@ -111,7 +113,10 @@ export const TeamDetails = () => {
 
   const tabOptions = [
     { id: "squad", label: `Squad Roster (${allSquadPlayers.length})` },
-    { id: "competitions", label: `Competitions (${runningCompetitions.length})` },
+    {
+      id: "competitions",
+      label: `Competitions (${runningCompetitions.length})`,
+    },
     { id: "info", label: "Club Profile & Stats" },
   ];
 
@@ -135,9 +140,21 @@ export const TeamDetails = () => {
 
   const radarData = [
     { subject: "Possession %", value: stats.possession || 58, fullMark: 100 },
-    { subject: "Pass Accuracy %", value: stats.passAccuracy || 86, fullMark: 100 },
-    { subject: "Goals Scored x10", value: (stats.goalsScored || 64) / 10, fullMark: 100 },
-    { subject: "Clean Sheets x5", value: (stats.cleanSheets || 12) * 5, fullMark: 100 },
+    {
+      subject: "Pass Accuracy %",
+      value: stats.passAccuracy || 86,
+      fullMark: 100,
+    },
+    {
+      subject: "Goals Scored x10",
+      value: (stats.goalsScored || 64) / 10,
+      fullMark: 100,
+    },
+    {
+      subject: "Clean Sheets x5",
+      value: (stats.cleanSheets || 12) * 5,
+      fullMark: 100,
+    },
   ];
 
   return (
@@ -170,7 +187,9 @@ export const TeamDetails = () => {
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <span className="text-5xl leading-none">{teamCrest || "🛡️"}</span>
+                <span className="text-5xl leading-none">
+                  {teamCrest || "🛡️"}
+                </span>
               )}
             </div>
 
@@ -190,7 +209,10 @@ export const TeamDetails = () => {
                     isFavorited ? "text-primary" : "text-muted hover:text-text"
                   }`}
                 >
-                  <Star size={16} className={isFavorited ? "fill-current" : ""} />
+                  <Star
+                    size={16}
+                    className={isFavorited ? "fill-current" : ""}
+                  />
                 </button>
               </div>
 
@@ -198,7 +220,11 @@ export const TeamDetails = () => {
                 {area?.name && (
                   <span className="flex items-center gap-1">
                     {area.flag && (
-                      <img src={area.flag} alt="" className="w-4 h-3 object-cover rounded-xs" />
+                      <img
+                        src={area.flag}
+                        alt=""
+                        className="w-4 h-3 object-cover rounded-xs"
+                      />
                     )}
                     {area.name}
                   </span>
@@ -224,14 +250,18 @@ export const TeamDetails = () => {
               <span className="text-muted block text-[10px] uppercase font-semibold">
                 Head Coach
               </span>
-              <strong className="text-text font-bold text-sm">{managerName}</strong>
+              <strong className="text-text font-bold text-sm">
+                {managerName}
+              </strong>
             </div>
             {clubColors && (
               <div className="border-l border-border/50 pl-4">
                 <span className="text-muted block text-[10px] uppercase font-semibold">
                   Club Colors
                 </span>
-                <strong className="text-primary font-bold text-sm">{clubColors}</strong>
+                <strong className="text-primary font-bold text-sm">
+                  {clubColors}
+                </strong>
               </div>
             )}
           </div>
@@ -268,7 +298,22 @@ export const TeamDetails = () => {
                 {filteredSquad.map((p) => (
                   <Card
                     key={p.id}
-                    className="p-4 border border-border hover:border-primary/40 transition-all flex items-center justify-between group"
+                    onClick={() =>
+                      navigate(`/player/${p.id}`, {
+                        // state: {
+                        //   player: {
+                        //     id: String(p.id),
+                        //     name: p.name,
+                        //     position: p.position,
+                        //     nationality: p.nationality,
+                        //     dateOfBirth: p.dateOfBirth,
+                        //     teamName: name,
+                        //     teamCrest: teamCrest,
+                        //   },
+                        // },
+                      })
+                    }
+                    className="p-4 border border-border hover:border-primary/40 transition-all flex items-center justify-between group cursor-pointer"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-extrabold text-primary shrink-0 group-hover:scale-105 transition-transform">
@@ -348,7 +393,8 @@ export const TeamDetails = () => {
                         )}
                       </div>
                       <p className="text-[10px] text-muted capitalize mt-0.5">
-                        Type: {comp.type ? comp.type.replace("_", " ") : "Tournament"}
+                        Type:{" "}
+                        {comp.type ? comp.type.replace("_", " ") : "Tournament"}
                       </p>
                     </div>
                   </Card>
@@ -419,7 +465,9 @@ export const TeamDetails = () => {
                         <ExternalLink size={10} />
                       </a>
                     ) : (
-                      <strong className="text-xs text-text font-bold">N/A</strong>
+                      <strong className="text-xs text-text font-bold">
+                        N/A
+                      </strong>
                     )}
                   </div>
                 </div>
@@ -461,7 +509,11 @@ export const TeamDetails = () => {
                         fontSize={10}
                         tickLine={false}
                       />
-                      <YAxis stroke="var(--muted)" fontSize={10} tickLine={false} />
+                      <YAxis
+                        stroke="var(--muted)"
+                        fontSize={10}
+                        tickLine={false}
+                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "var(--card)",
@@ -492,7 +544,12 @@ export const TeamDetails = () => {
                 </h4>
                 <div className="h-56 w-full flex justify-center">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="70%"
+                      data={radarData}
+                    >
                       <PolarGrid stroke="var(--border)" />
                       <PolarAngleAxis
                         dataKey="subject"
