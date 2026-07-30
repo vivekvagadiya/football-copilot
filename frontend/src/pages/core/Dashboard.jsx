@@ -489,7 +489,7 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-0">
               {loadingLeaderboard ? (
                 <div className="space-y-3 py-4 px-2">
                   <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
@@ -498,7 +498,7 @@ export const Dashboard = () => {
                   <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
                 </div>
               ) : topScorers.length > 0 ? (
-                topScorers.map((player, idx) => (
+                topScorers.slice(0, 10).map((player, idx) => (
                   <div
                     key={player.id}
                     onClick={() => navigate(`/player/${player.id}`)}

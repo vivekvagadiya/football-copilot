@@ -58,7 +58,7 @@ export const DashboardLayout = () => {
 
       {/* Desktop Sidebar (Left) */}
       <aside 
-        className={`hidden md:flex flex-col border-r border-border bg-card shrink-0 sidebar-transition relative z-30 ${
+        className={`hidden md:flex flex-col h-screen sticky top-0 border-r border-border bg-card shrink-0 sidebar-transition z-30 ${
           isSidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -82,7 +82,7 @@ export const DashboardLayout = () => {
         </div>
 
         {/* Sidebar Navigation items */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto min-h-0">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
@@ -122,7 +122,7 @@ export const DashboardLayout = () => {
         </nav>
 
         {/* Sidebar Footer Profile */}
-        <div className="border-t border-border p-3 space-y-2">
+        <div className="shrink-0 border-t border-border p-3 space-y-2 bg-card">
           {!isSidebarCollapsed && user && (
             <div className="flex items-center gap-3 p-1.5 rounded-lg bg-background/45 border border-border/20">
               <Avatar fallback={user.username[0]} size="sm" />
@@ -212,8 +212,8 @@ export const DashboardLayout = () => {
         title="Copilot OS Menu"
         position="right"
       >
-        <div className="flex flex-col h-full justify-between">
-          <nav className="space-y-1">
+        <div className="flex flex-col h-full justify-between min-h-0">
+          <nav className="flex-1 overflow-y-auto space-y-1 pr-1 min-h-0">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -251,7 +251,7 @@ export const DashboardLayout = () => {
             })}
           </nav>
 
-          <div className="border-t border-border pt-4 mt-6 space-y-3">
+          <div className="shrink-0 border-t border-border pt-3 mt-3 space-y-3 bg-card">
             {user && (
               <div className="flex items-center gap-3 p-2 rounded-lg bg-border/10">
                 <Avatar fallback={user.username[0]} size="sm" />

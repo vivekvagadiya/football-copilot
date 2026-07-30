@@ -42,20 +42,20 @@ export const Drawer = ({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={`pointer-events-auto bg-card border-border shadow-2xl flex flex-col ${
                 isRight 
-                  ? 'h-full w-full max-w-sm border-l' 
+                  ? 'h-screen max-h-screen w-full max-w-sm border-l' 
                   : 'w-full max-h-[85vh] rounded-t-2xl border-t'
               } ${className}`}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                 {title && <h3 className="font-display font-semibold text-text">{title}</h3>}
                 <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full w-8 h-8">
                   <X size={16} />
                 </Button>
               </div>
 
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-4">{children}</div>
+              {/* Body Content Container */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-4">{children}</div>
             </motion.div>
           </div>
         </div>
