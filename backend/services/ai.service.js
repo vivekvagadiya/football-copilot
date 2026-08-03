@@ -192,7 +192,54 @@ ${JSON.stringify(matchData, null, 2)}`;
   }
 };
 
+/**
+ * Generate a structured AI news summary using Gemini AI
+ * @param {Object} newsItem - Raw news item with title, content, and source
+ * @returns {Promise<string>} AI response text in Markdown
+ */
+const generateNewsSummaryResponse = async (newsItem) => {
+  if (!aiClient) {
+    throw new Error("Gemini API key is missing in server environment.");
+  }
+
+  const prompt = `Generate a concise, insightful, and structured AI summary/briefing of the following football news article.
+Provide:
+1. A quick "Key Takeaway" or TL;DR section.
+2. A bulleted list of the main points/arguments.
+3. The "Tactical/Strategic Context" or "Future Outlook & Implications" of this news.
+Format the output elegantly using clean Markdown with distinct headers.
+News Article:
+Title: ${newsItem.title}
+Content: ${newsItem.content}
+Source: ${newsItem.sourceStr || "Unknown Source"}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await aiClient.models.generateContent({
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: "You are an elite football sports writer and tactical analyst. Generate a structured AI news summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Executive Summary, ### 📌 Key Bullet Points, ### 🔮 Future Outlook & Implications). Keep bullet points concise and details accurate.",
+        temperature: 0.6,
+        maxOutputTokens: 1000,
+      },
+    });
+
+    if (response && response.text) {
+      return response.text;
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error("Error generating Gemini news summary:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
+  generateNewsSummaryResponse,
 };

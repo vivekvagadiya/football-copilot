@@ -22,6 +22,8 @@ import { TransferCard } from "../../components/football/TransferCard";
 import { TeamLogo } from "../../components/football/TeamLogo";
 import { Loading } from "../../components/ui/Loading";
 import { Button } from "../../components/ui/Button";
+import { Drawer } from "../../components/ui/Drawer";
+import { AIResponseCard } from "../../components/ai/AIResponseCard";
 import {
   getLiveMatchesApi,
   getUpcomingMatchesApi,
@@ -30,6 +32,7 @@ import {
   getTopTransfersApi,
   getMarketValueTransfersApi,
   getNewsApi,
+  getNewsSummaryApi,
 } from "../../api/football.api";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
 
@@ -51,6 +54,7 @@ export const Dashboard = () => {
   const [selectedScorerSeason, setSelectedScorerSeason] = useState("2025");
   const [isScorerLeagueDropdownOpen, setIsScorerLeagueDropdownOpen] =
     useState(false);
+  const [selectedNews, setSelectedNews] = useState(null);
 
   // Fetch live matches - poll every 30s (Option B)
   const { data: liveMatches = [], isLoading: loadingLive } = useQuery({
@@ -91,6 +95,14 @@ export const Dashboard = () => {
   const { data: news = [], isLoading: loadingNews } = useQuery({
     queryKey: ["news"],
     queryFn: () => getNewsApi(1),
+  });
+
+  // Fetch AI news summary when selectedNews is set
+  const { data: newsSummaryData, isLoading: loadingSummary } = useQuery({
+    queryKey: ["newsSummary", selectedNews?.id],
+    queryFn: () => getNewsSummaryApi(selectedNews.id),
+    enabled: !!selectedNews?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch top transfers with mock fallback
@@ -210,7 +222,7 @@ export const Dashboard = () => {
               {news.slice(0, 8).map((n) => (
                 <Card
                   key={n.id}
-                  onClick={() => navigate("/news")}
+                  onClick={() => setSelectedNews(n)}
                   className="cursor-pointer hover:border-primary/20 transition-all flex gap-4 p-4 items-start"
                 >
                   <img
@@ -569,6 +581,63 @@ export const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <Drawer
+        isOpen={!!selectedNews}
+        onClose={() => setSelectedNews(null)}
+        title="AI Intelligence Briefing"
+        className="max-w-lg md:max-w-xl"
+      >
+        {selectedNews && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar space-y-4 pb-6">
+            {/* Header Image & Info */}
+            <div className="relative h-48 rounded-xl overflow-hidden shrink-0 border border-border">
+              <img
+                src={selectedNews.image}
+                alt={selectedNews.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-left">
+                <span className="text-[9px] text-primary font-bold uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 backdrop-blur-sm">
+                  {selectedNews.date}
+                </span>
+                <h4 className="font-display font-bold text-text text-sm sm:text-base mt-2 leading-snug">
+                  {selectedNews.title}
+                </h4>
+              </div>
+            </div>
+
+            {/* AI Summary Section */}
+            <div className="flex-1 space-y-3 min-h-0 text-left">
+              {loadingSummary ? (
+                <div className="space-y-4 py-2">
+                  <div className="flex gap-3.5 items-start">
+                    <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary shrink-0 animate-pulse">
+                      <Cpu size={16} />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="h-3 bg-border/20 rounded animate-pulse w-1/4" />
+                      <div className="space-y-2">
+                        <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
+                        <div className="h-4 bg-border/20 rounded animate-pulse w-5/6" />
+                        <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
+                        <div className="h-4 bg-border/20 rounded animate-pulse w-2/3" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : newsSummaryData?.aiSummary ? (
+                <AIResponseCard content={newsSummaryData.aiSummary} />
+              ) : (
+                <div className="text-center py-8 text-xs text-muted">
+                  Could not load news summary. Please try again.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };

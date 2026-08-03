@@ -1,6 +1,7 @@
 const footballApi = require("./footballApi.service");
 const rapidFootballApi = require("./rapidFootballApi.service");
 const MatchSummary = require("../models/matchSummary.model");
+const NewsSummary = require("../models/newsSummary.model");
 const aiService = require("./ai.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
 const {
@@ -676,6 +677,45 @@ const getNews = async (page = 1) => {
   }
 };
 
+const getNewsSummary = async (newsId) => {
+  let cachedSummary = await NewsSummary.findOne({ newsId });
+  const now = new Date();
+
+  if (cachedSummary && cachedSummary.aiSummary) {
+    return cachedSummary;
+  }
+
+  // Find the news item details
+  // 1. Fetch current news items (will use RapidAPI / MOCK_NEWS fallback)
+  const newsItems = await getNews(1);
+  const newsItem = newsItems.find((item) => item.id === newsId);
+
+  if (!newsItem) {
+    throw new Error(`News article with ID ${newsId} not found`);
+  }
+
+  try {
+    const summaryText = await aiService.generateNewsSummaryResponse(newsItem);
+
+    if (!cachedSummary) {
+      cachedSummary = new NewsSummary({
+        newsId,
+        aiSummary: summaryText,
+        lastUpdated: now,
+      });
+    } else {
+      cachedSummary.aiSummary = summaryText;
+      cachedSummary.lastUpdated = now;
+    }
+
+    await cachedSummary.save();
+    return cachedSummary;
+  } catch (error) {
+    console.error(`Error generating or saving AI News Summary for ID ${newsId}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -693,4 +733,5 @@ module.exports = {
   getTopTransfers,
   getMarketValueTransfers,
   getNews,
+  getNewsSummary,
 };

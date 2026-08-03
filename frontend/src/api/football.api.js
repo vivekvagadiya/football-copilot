@@ -149,3 +149,12 @@ export const getNewsApi = async (page = 1) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getNewsSummaryApi = async (newsId) => {
+  try {
+    const response = await axiosInstance.get(`/football/news/${newsId}/ai-summary`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

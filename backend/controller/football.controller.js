@@ -212,6 +212,16 @@ const getNewsController = async (req, res) => {
   }
 };
 
+const getNewsSummaryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await footballService.getNewsSummary(id);
+    return apiResponse.success(res, "AI News summary fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -229,4 +239,5 @@ module.exports = {
   getTopTransfersController,
   getMarketValueTransfersController,
   getNewsController,
+  getNewsSummaryController,
 };

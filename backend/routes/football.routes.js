@@ -86,4 +86,8 @@ router.get(
   cacheMiddleware(3600),
   footballController.getNewsController,
 );
+router.get(
+  "/news/:id/ai-summary",
+  footballController.getNewsSummaryController,
+);
 module.exports = router;
