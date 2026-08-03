@@ -100,6 +100,19 @@ const getMatchDetailsController = async (req, res) => {
   }
 };
 
+const getMatchSummaryController = async (req, res) => {
+  try {
+    const matchId = req.params.id;
+    if (!matchId) {
+      return apiResponse.error(res, "Match ID is required", 400);
+    }
+    const data = await footballService.getMatchSummary(matchId);
+    return apiResponse.success(res, "Match AI summary fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 const getCompetationController = async (req, res) => {
   try {
     const data = await footballService.getCompetation();
@@ -160,4 +173,5 @@ module.exports = {
   getTeamsByCompetationController,
   getPlayerDetailsController,
   getTeamDetailsController,
+  getMatchSummaryController,
 };

@@ -3,6 +3,7 @@ const http = require("http");
 const app = require("./app");
 const connectDB = require("./config/db");
 const initCleanupJob = require("./jobs/cleanupFavorites.job");
+const initSyncLiveMatchesJob = require("./jobs/syncLiveMatches.job");
 
 const PORT = process.env.PORT || 8000;
 
@@ -11,6 +12,7 @@ const startServer = async () => {
 
   // Initialize Cron Jobs
   initCleanupJob();
+  initSyncLiveMatchesJob();
 
   const server = http.createServer(app);
   server.listen(PORT, () => {

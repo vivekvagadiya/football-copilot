@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Shield, Clock, MapPin, Activity, ListFilter, ClipboardList } from 'lucide-react';
+import { ChevronLeft, Shield, Clock, MapPin, Activity, ListFilter, ClipboardList, Sparkles } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import { Loading } from '../../components/ui/Loading';
 import { Card } from '../../components/ui/Card';
@@ -9,17 +9,25 @@ import { Badge } from '../../components/ui/Badge';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { TeamLogo } from '../../components/football/TeamLogo';
-import { getMatchDetailsApi } from '../../api/football.api';
+import { getMatchDetailsApi, getMatchAiSummaryApi } from '../../api/football.api';
+import { AIResponseCard } from '../../components/ai/AIResponseCard';
 
 export const MatchDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('ai-summary');
 
   const { data: match, isLoading } = useQuery({
     queryKey: ['matchDetail', id],
     queryFn: () => getMatchDetailsApi(id),
     enabled: !!id
+  });
+
+  const { data: aiSummaryData, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ['matchAiSummary', id],
+    queryFn: () => getMatchAiSummaryApi(id),
+    enabled: !!id && activeTab === 'ai-summary',
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes to avoid refetching on tab switch
   });
 
   if (isLoading) {
@@ -38,6 +46,7 @@ export const MatchDetails = () => {
   const { homeTeam, awayTeam, leagueName, status, minute, events = [], lineups = {}, date } = match;
 
   const tabOptions = [
+    { id: 'ai-summary', label: 'AI Match Summary' },
     { id: 'overview', label: 'Overview' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'statistics', label: 'Statistics' },
@@ -127,14 +136,41 @@ export const MatchDetails = () => {
         </div>
       </Card>
 
-      {/* Tabs - Commented out since detailed stats/lineups are not present in current API response */}
-      {/*
+      {/* Tabs navigation */}
       <Tabs tabs={tabOptions} activeTab={activeTab} onChange={setActiveTab} />
-      */}
 
-      {/* Tab Contents - Commented out via false conditional since detailed events/stats/lineups are not present in API */}
-      {false && (
+      {/* Tab Contents */}
+      {true && (
         <div className="mt-4">
+          {/* AI SUMMARY TAB */}
+          {activeTab === 'ai-summary' && (
+            <div className="space-y-4">
+              {isSummaryLoading ? (
+                <div className="space-y-3.5">
+                  <Card hover={false} className="border border-border/80 p-5 bg-card space-y-4">
+                    <div className="h-4 bg-border/40 rounded w-1/4 animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-3 bg-border/25 rounded w-full animate-pulse" />
+                      <div className="h-3 bg-border/25 rounded w-11/12 animate-pulse" />
+                      <div className="h-3 bg-border/25 rounded w-5/6 animate-pulse" />
+                    </div>
+                  </Card>
+                </div>
+              ) : aiSummaryData?.aiSummary ? (
+                <div className="w-full">
+                  <AIResponseCard content={aiSummaryData.aiSummary} />
+                </div>
+              ) : (
+                <Card hover={false} className="border border-border/80 p-8 flex flex-col items-center justify-center text-center space-y-3 bg-card py-12">
+                  <Sparkles size={24} className="text-primary animate-pulse" />
+                  <h4 className="font-display font-bold text-xs text-text">No AI Match Summary Available</h4>
+                  <p className="text-[10px] text-muted max-w-xs leading-relaxed">
+                    Summaries are generated dynamically for live and finished matches. If this match is scheduled, please check back closer to game time!
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

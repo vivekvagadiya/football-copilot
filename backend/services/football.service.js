@@ -1,4 +1,6 @@
 const footballApi = require("./footballApi.service");
+const MatchSummary = require("../models/matchSummary.model");
+const aiService = require("./ai.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
 const {
   MOCK_LIVE_MATCHES,
@@ -332,6 +334,66 @@ const getMatchDetails = async (matchId) => {
   }
 };
 
+const getMatchSummary = async (matchId) => {
+  let cachedSummary = await MatchSummary.findOne({ matchId });
+  const now = new Date();
+
+  // If already finished and summary exists, return immediately (fast cache response)
+  if (cachedSummary && cachedSummary.status === "FINISHED" && cachedSummary.aiSummary) {
+    return cachedSummary;
+  }
+
+  // Call API and check status if no cache, or if cache is live (meaning it's updating),
+  // or if last updated is older than 60 seconds
+  const isStale =
+    !cachedSummary ||
+    !cachedSummary.aiSummary ||
+    cachedSummary.status === "LIVE" ||
+    (now - new Date(cachedSummary.lastUpdated)) / 1000 > 60;
+
+  if (isStale) {
+    try {
+      const matchDetails = await getMatchDetails(matchId);
+      if (matchDetails) {
+        // Only call AI to generate a summary if:
+        // 1. We don't have a summary in the DB yet
+        // 2. The match is currently LIVE
+        // 3. The match status has changed (e.g. SCHEDULED -> LIVE, or LIVE -> FINISHED)
+        const hasNoSummary = !cachedSummary || !cachedSummary.aiSummary;
+        const isLive = matchDetails.status === "LIVE";
+        const statusChanged = cachedSummary && cachedSummary.status !== matchDetails.status;
+
+        const shouldGenerateAI = hasNoSummary || isLive || statusChanged;
+
+        let summaryText;
+        if (shouldGenerateAI) {
+          summaryText = await aiService.generateMatchSummaryResponse(matchDetails);
+        } else {
+          summaryText = cachedSummary.aiSummary;
+        }
+
+        if (!cachedSummary) {
+          cachedSummary = new MatchSummary({
+            matchId,
+            status: matchDetails.status,
+            aiSummary: summaryText,
+            lastUpdated: now,
+          });
+        } else {
+          cachedSummary.status = matchDetails.status;
+          cachedSummary.aiSummary = summaryText;
+          cachedSummary.lastUpdated = now;
+        }
+        await cachedSummary.save();
+      }
+    } catch (err) {
+      console.error(`Error generating or saving AI Match Summary for ID ${matchId}:`, err);
+    }
+  }
+
+  return cachedSummary;
+};
+
 const getCompetation = async () => {
   try {
     const competitionCodes = ["PL", "PD", "BL1", "FL1", "SA", "CL"];
@@ -481,4 +543,5 @@ module.exports = {
   getTeamsByCompetation,
   getPlayerDetails,
   getTeamDetails,
+  getMatchSummary,
 };

@@ -18,6 +18,7 @@ router.get("/standings", cacheMiddleware(300), footballController.getStandingCon
 router.get("/scorers", cacheMiddleware(600), footballController.getPlayerLeaderboardController);
 router.get("/leagues/:code", cacheMiddleware(600), footballController.getLeagueDetailsController);
 router.get("/matches/:id", cacheMiddleware(180), footballController.getMatchDetailsController);
+router.get("/matches/:id/ai-summary", footballController.getMatchSummaryController);
 router.get("/competitions", cacheMiddleware(900), footballController.getCompetationController);
 router.get(
   "/competitions/:leagueId/teams",

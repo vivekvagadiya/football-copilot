@@ -107,3 +107,12 @@ export const getTeamDetailsApi = async (teamId) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getMatchAiSummaryApi = async (matchId) => {
+  try {
+    const response = await axiosInstance.get(`/football/matches/${matchId}/ai-summary`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

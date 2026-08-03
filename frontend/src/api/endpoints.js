@@ -31,6 +31,9 @@ const endpoints = {
     toggle: "/favorites/toggle",
     getFavorites: "/favorites",
     getFavoriteIds: "/favorites/ids",
+  },
+  ai: {
+    chat: "/ai/chat",
   }
 };
 
