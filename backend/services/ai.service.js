@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require("@google/genai");
 const logger = require("../config/logger");
-
+const footballService = require("./football.service");
 const apiKey = process.env.GEMINI_API_KEY;
 
 let aiClient = null;
@@ -9,7 +9,20 @@ if (apiKey) {
 } else {
   logger.warn("GEMINI_API_KEY is not configured in backend .env");
 }
-
+const toolRegistry = {
+  getLiveMatches: async () => {
+    return await footballService.getLiveMatches();
+  },
+  getStanding: async (args) => {
+    return await footballService.getStanding(args.leagueCode);
+  },
+  getPlayerDetails: async (args) => {
+    return await footballService.getPlayerDetails(args.playerId);
+  },
+  searchPlayers: async (args) => {
+    return await footballService.searchPlayers(args.query);
+  },
+};
 const SYSTEM_INSTRUCTION = `You are Football Copilot, an elite AI sports analyst, tactical advisor, and football intelligence system.
 Your job is to provide clear, insightful, accurate, and structured responses regarding football matches, tactical setups, player statistics, team standings, transfers, and scouting.
 
@@ -44,9 +57,8 @@ const generateChatResponse = async (prompt, history = []) => {
     throw new Error("Gemini API key is missing in server environment.");
   }
 
-  // Format history for Gemini API standard (user / model roles)
+  // 1. Format history for the Gemini API (user / model roles)
   const contents = [];
-
   if (Array.isArray(history) && history.length > 0) {
     history.forEach((msg) => {
       if (!msg.text) return;
@@ -58,96 +70,102 @@ const generateChatResponse = async (prompt, history = []) => {
     });
   }
 
-  // Append current user prompt
+  // 2. Append current user prompt
   contents.push({
     role: "user",
     parts: [{ text: prompt }],
   });
 
-  // Ensure model name is valid (gemini-2.0-flash or gemini-1.5-flash)
   const envModel = process.env.GEMINI_MODEL;
   const selectedModel = envModel ? envModel : "gemini-2.0-flash";
-  console.log(selectedModel, envModel, "selected model");
 
   try {
-    const response = await aiClient.models.generateContent({
-      model: selectedModel,
-      contents: contents,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-        maxOutputTokens: 700, // High token limit so responses don't cut off mid-sentence
-      },
-    });
+    let loopCount = 0;
+    const MAX_LOOPS = 5; // Guard against infinite tool-calling loops
 
-    if (response && response.text) {
-      return response.text;
-    }
+    while (loopCount < MAX_LOOPS) {
+      // Send message to Gemini with registered tools
+      const response = await aiClient.models.generateContent({
+        model: selectedModel,
+        contents: contents,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          tools: footballTools,
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+        },
+      });
 
-    throw new Error("No text response returned from Gemini API.");
-  } catch (error) {
-    logger.error("Error generating Gemini chat response:", error);
+      // CASE A: No tool call requested. This is the final text answer from Gemini.
+      if (!response.functionCalls || response.functionCalls.length === 0) {
+        if (response && response.text) {
+          return response.text;
+        }
+        throw new Error("No text response returned from Gemini API.");
+      }
 
-    const errString =
-      typeof error === "string"
-        ? error
-        : error.message || JSON.stringify(error);
-
-    // Handle 429 Rate Limit / Quota Exceeded cleanly
-    if (
-      error.status === 429 ||
-      errString.includes("429") ||
-      errString.includes("RESOURCE_EXHAUSTED") ||
-      errString.includes("Quota exceeded")
-    ) {
-      const customError = new Error(
-        "Gemini API rate limit or quota exceeded. Please wait a few seconds and try again.",
+      // CASE B: Gemini requested one or more tool calls.
+      logger.info(
+        `Gemini requested tool execution: ${JSON.stringify(response.functionCalls)}`,
       );
-      customError.statusCode = 429;
-      throw customError;
+
+      // A) Save the model's call request to history so the conversation remains coherent
+      contents.push({
+        role: "model",
+        parts: response.candidates[0].content.parts,
+      });
+
+      // B) Execute each requested tool in parallel
+      const toolResponseParts = [];
+      for (const call of response.functionCalls) {
+        const functionName = call.name;
+        const functionArgs = call.args;
+
+        if (toolRegistry[functionName]) {
+          try {
+            const executionResult =
+              await toolRegistry[functionName](functionArgs);
+
+            toolResponseParts.push({
+              functionResponse: {
+                name: functionName,
+                response: { result: executionResult },
+              },
+            });
+          } catch (execErr) {
+            logger.error(`Error executing tool ${functionName}:`, execErr);
+            toolResponseParts.push({
+              functionResponse: {
+                name: functionName,
+                response: { error: execErr.message || "Failed execution" },
+              },
+            });
+          }
+        } else {
+          toolResponseParts.push({
+            functionResponse: {
+              name: functionName,
+              response: { error: `Tool ${functionName} is not registered.` },
+            },
+          });
+        }
+      }
+
+      // C) Send the tool execution output back to Gemini's context
+      contents.push({
+        role: "user",
+        parts: toolResponseParts,
+      });
+
+      loopCount++;
     }
 
-    // Handle 404 / Model not found with fallback
-    if (
-      error.status === 404 ||
-      errString.includes("NOT_FOUND") ||
-      errString.includes("not found") ||
-      errString.includes("no longer available")
-    ) {
-      try {
-        logger.info("Attempting fallback to gemini-1.5-flash...");
-        const fallbackResponse = await aiClient.models.generateContent({
-          model: "gemini-1.5-flash",
-          contents: contents,
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          },
-        });
-        if (fallbackResponse && fallbackResponse.text) {
-          return fallbackResponse.text;
-        }
-      } catch (fallbackErr) {
-        logger.error("Fallback to gemini-1.5-flash also failed:", fallbackErr);
-      }
-    }
-
-    // Parse stringified JSON error messages if present
-    let userFriendlyMessage =
-      "Failed to communicate with AI service. Please try again.";
-    try {
-      if (typeof error.message === "string" && error.message.startsWith("{")) {
-        const parsed = JSON.parse(error.message);
-        if (parsed?.error?.message) {
-          userFriendlyMessage = parsed.error.message;
-        }
-      }
-    } catch (_) {}
-
-    const finalErr = new Error(userFriendlyMessage);
-    finalErr.statusCode = error.status || 500;
-    throw finalErr;
+    throw new Error(
+      "Max tool calling loop threshold exceeded without a text response.",
+    );
+  } catch (error) {
+    logger.error("Error generating Gemini response with tools:", error);
+    throw error;
   }
 };
 
@@ -175,7 +193,8 @@ ${JSON.stringify(matchData, null, 2)}`;
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: "You are an elite football sports writer and tactical analyst. Generate a structured match summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Match Analysis, ### 🔑 Turning Points, ### 🏆 Standout Performers). Keep bullet points concise and stats accurate.",
+        systemInstruction:
+          "You are an elite football sports writer and tactical analyst. Generate a structured match summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Match Analysis, ### 🔑 Turning Points, ### 🏆 Standout Performers). Keep bullet points concise and stats accurate.",
         temperature: 0.6,
         maxOutputTokens: 1200,
       },
@@ -221,7 +240,8 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: "You are an elite football sports writer and tactical analyst. Generate a structured AI news summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Executive Summary, ### 📌 Key Bullet Points, ### 🔮 Future Outlook & Implications). Keep bullet points concise and details accurate.",
+        systemInstruction:
+          "You are an elite football sports writer and tactical analyst. Generate a structured AI news summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Executive Summary, ### 📌 Key Bullet Points, ### 🔮 Future Outlook & Implications). Keep bullet points concise and details accurate.",
         temperature: 0.6,
         maxOutputTokens: 1000,
       },
@@ -238,8 +258,65 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
   }
 };
 
+// Add this to your ai.service.js file
+const footballTools = [
+  {
+    functionDeclarations: [
+      {
+        name: "getLiveMatches",
+        description:
+          "Fetch live matches happening right now with scores, teams, and elapsed time.",
+        parameters: { type: "OBJECT", properties: {} },
+      },
+      {
+        name: "getStanding",
+        description: "Fetch league standings/table for a specific competition.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            leagueCode: {
+              type: "STRING",
+              description:
+                "The code of the league (PL for Premier League, PD for La Liga, SA for Serie A, BL1 for Bundesliga, FL1 for Ligue 1, CL for Champions League).",
+            },
+          },
+          required: ["leagueCode"],
+        },
+      },
+      {
+        name: "getPlayerDetails",
+        description:
+          "Fetch details, stats, current team, and transfers for a specific player by their ID.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            playerId: { type: "STRING", description: "The unique player ID." },
+          },
+          required: ["playerId"],
+        },
+      },
+      {
+        name: "searchPlayers",
+        description:
+          "Search for football players by name to find their ID and details.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            query: {
+              type: "STRING",
+              description: "The search query (e.g. Messi, Haaland).",
+            },
+          },
+          required: ["query"],
+        },
+      },
+    ],
+  },
+];
+
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
   generateNewsSummaryResponse,
+  footballTools,
 };

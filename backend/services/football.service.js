@@ -110,6 +110,7 @@ const getLiveMatches = async () => {
   try {
     const matchesRes = await footballApi.get("/matches?limit=10&status=LIVE");
     const rawMatches = matchesRes.data?.matches || [];
+    console.log("live calling");
     return rawMatches.map(mapMatch);
   } catch (err) {
     console.error(
@@ -711,7 +712,10 @@ const getNewsSummary = async (newsId) => {
     await cachedSummary.save();
     return cachedSummary;
   } catch (error) {
-    console.error(`Error generating or saving AI News Summary for ID ${newsId}:`, error);
+    console.error(
+      `Error generating or saving AI News Summary for ID ${newsId}:`,
+      error,
+    );
     throw error;
   }
 };
