@@ -1,4 +1,5 @@
 const footballApi = require("./footballApi.service");
+const rapidFootballApi = require("./rapidFootballApi.service");
 const MatchSummary = require("../models/matchSummary.model");
 const aiService = require("./ai.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
@@ -339,7 +340,11 @@ const getMatchSummary = async (matchId) => {
   const now = new Date();
 
   // If already finished and summary exists, return immediately (fast cache response)
-  if (cachedSummary && cachedSummary.status === "FINISHED" && cachedSummary.aiSummary) {
+  if (
+    cachedSummary &&
+    cachedSummary.status === "FINISHED" &&
+    cachedSummary.aiSummary
+  ) {
     return cachedSummary;
   }
 
@@ -361,13 +366,15 @@ const getMatchSummary = async (matchId) => {
         // 3. The match status has changed (e.g. SCHEDULED -> LIVE, or LIVE -> FINISHED)
         const hasNoSummary = !cachedSummary || !cachedSummary.aiSummary;
         const isLive = matchDetails.status === "LIVE";
-        const statusChanged = cachedSummary && cachedSummary.status !== matchDetails.status;
+        const statusChanged =
+          cachedSummary && cachedSummary.status !== matchDetails.status;
 
         const shouldGenerateAI = hasNoSummary || isLive || statusChanged;
 
         let summaryText;
         if (shouldGenerateAI) {
-          summaryText = await aiService.generateMatchSummaryResponse(matchDetails);
+          summaryText =
+            await aiService.generateMatchSummaryResponse(matchDetails);
         } else {
           summaryText = cachedSummary.aiSummary;
         }
@@ -387,7 +394,10 @@ const getMatchSummary = async (matchId) => {
         await cachedSummary.save();
       }
     } catch (err) {
-      console.error(`Error generating or saving AI Match Summary for ID ${matchId}:`, err);
+      console.error(
+        `Error generating or saving AI Match Summary for ID ${matchId}:`,
+        err,
+      );
     }
   }
 

@@ -25,6 +25,7 @@ router.get(
   cacheMiddleware(600),
   footballController.getTeamsByCompetationController
 );
+router.get("/players/search", cacheMiddleware(300), footballController.searchPlayersController);
 router.get("/players/:id", cacheMiddleware(900), footballController.getPlayerDetailsController);
 router.get("/teams/:id", cacheMiddleware(900), footballController.getTeamDetailsController);
 module.exports = router;

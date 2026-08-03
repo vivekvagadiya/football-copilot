@@ -107,7 +107,11 @@ const getMatchSummaryController = async (req, res) => {
       return apiResponse.error(res, "Match ID is required", 400);
     }
     const data = await footballService.getMatchSummary(matchId);
-    return apiResponse.success(res, "Match AI summary fetched successfully", data);
+    return apiResponse.success(
+      res,
+      "Match AI summary fetched successfully",
+      data,
+    );
   } catch (error) {
     return apiResponse.error(res, error.message);
   }
@@ -142,7 +146,11 @@ const getPlayerDetailsController = async (req, res) => {
       return apiResponse.error(res, "Player ID is required", 400);
     }
     const data = await footballService.getPlayerDetails(id);
-    return apiResponse.success(res, "Player details fetched successfully", data);
+    return apiResponse.success(
+      res,
+      "Player details fetched successfully",
+      data,
+    );
   } catch (error) {
     return apiResponse.error(res, error.message);
   }
@@ -161,6 +169,19 @@ const getTeamDetailsController = async (req, res) => {
   }
 };
 
+const searchPlayersController = async (req, res) => {
+  try {
+    const { search } = req.query;
+    if (!search) {
+      return apiResponse.error(res, "Search query is required", 400);
+    }
+    const data = await footballService.searchPlayers(search);
+    return apiResponse.success(res, "Players searched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -174,4 +195,5 @@ module.exports = {
   getPlayerDetailsController,
   getTeamDetailsController,
   getMatchSummaryController,
+  searchPlayersController,
 };
