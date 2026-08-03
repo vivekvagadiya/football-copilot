@@ -163,16 +163,21 @@ const upcomingMatches = async (
 ) => {
   try {
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateToObj = new Date(today);
+    dateToObj.setDate(today.getDate() + 10);
 
-    const defaultPastDate = new Date(today);
-    defaultPastDate.setDate(defaultPastDate.getDate() - 7);
+    const formatDate = (date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
 
     const params = {
-      dateFrom: dateFrom || "2026-08-20",
-      dateTo: dateTo || "2026-08-29",
+      dateFrom: dateFrom || "2026-08-18" || formatDate(today),
+      dateTo: dateTo || "2026-08-28" || formatDate(dateToObj),
     };
+    console.log("params", params);
 
     const compFilter =
       leagueId || competitions || DEFAULT_COMPETITIONS.join(",");
