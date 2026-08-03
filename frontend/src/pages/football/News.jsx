@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Newspaper, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiService } from '../../services/apiService';
+import { NEWS } from '../../constants/mockData';
+import { getMarketValueTransfersApi } from '../../api/football.api';
 import { Loading } from '../../components/ui/Loading';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -9,10 +11,24 @@ import { Button } from '../../components/ui/Button';
 export const News = () => {
   const [expandedId, setExpandedId] = useState(null);
 
-  const { data: news = [], isLoading } = useQuery({
-    queryKey: ['news'],
-    queryFn: apiService.getNews
+  const { data: mvTransfersRaw = [], isLoading } = useQuery({
+    queryKey: ['newsTransfers'],
+    queryFn: () => getMarketValueTransfersApi(1)
   });
+
+  const news = mvTransfersRaw.length > 0
+    ? mvTransfersRaw.map((t, idx) => ({
+        id: t.id || `news-${idx}`,
+        title: `${t.player} Market Value Transfer Update`,
+        summary: `${t.player} has moved from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
+        content: `${t.player} completed a transfer from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
+        date: t.date || "Recent",
+        reads: `${Math.floor(Math.random() * 20) + 5}K reads`,
+        image: idx % 2 === 0
+          ? "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=600&auto=format&fit=crop"
+          : "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop",
+      }))
+    : NEWS;
 
   const toggleExpand = (id) => {
     setExpandedId(prev => (prev === id ? null : id));

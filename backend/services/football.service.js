@@ -541,6 +541,88 @@ const getTeamDetails = async (teamId) => {
   }
 };
 
+const mapTransfer = (t, index) => {
+  // Format fee
+  let feeText = "Undisclosed";
+  if (t.fee && t.fee.feeText) {
+    feeText = t.fee.feeText;
+  } else if (t.amountEuroEstimated) {
+    feeText = `€${(t.amountEuroEstimated / 1000000).toFixed(1)}M`;
+  } else if (t.marketValue) {
+    feeText = `€${(t.marketValue / 1000000).toFixed(1)}M (Est.)`;
+  }
+
+  // Format date
+  let dateText = "Recent";
+  if (t.transferDate) {
+    const diffTime = Math.abs(new Date() - new Date(t.transferDate));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 1) {
+      dateText = "Today";
+    } else if (diffDays === 2) {
+      dateText = "Yesterday";
+    } else {
+      dateText = `${diffDays} days ago`;
+    }
+  }
+
+  return {
+    id: t.playerId ? `${t.playerId}-${index}` : String(Math.random()),
+    player: t.name || "Unknown Player",
+    position: t.position?.label || "Player",
+    fromClub: t.fromClub || "Unknown Club",
+    toClub: t.toClub || "Unknown Club",
+    fee: feeText,
+    status: t.onLoan ? "On Loan" : "Done Deal",
+    confidence: 100, // Actual transfer
+    date: dateText,
+  };
+};
+
+const searchPlayers = async (searchQuery) => {
+  try {
+    const response = await rapidFootballApi.get("/football-players-search", {
+      params: { search: searchQuery },
+    });
+    return response.data || null;
+  } catch (error) {
+    console.error("Error searching players via RapidAPI:", error.message);
+    throw error;
+  }
+};
+
+const getTopTransfers = async (page = 1) => {
+  try {
+    const response = await rapidFootballApi.get("/football-get-top-transfers", {
+      params: { page },
+    });
+    const transfers = response.data?.response?.transfers || [];
+    return transfers.map((t, idx) => mapTransfer(t, idx));
+  } catch (error) {
+    console.error("Error fetching top transfers via RapidAPI:", error.message);
+    throw error;
+  }
+};
+
+const getMarketValueTransfers = async (page = 1) => {
+  try {
+    const response = await rapidFootballApi.get(
+      "/football-get-market-value-transfers",
+      {
+        params: { page },
+      },
+    );
+    const transfers = response.data?.response?.transfers || [];
+    return transfers.map((t, idx) => mapTransfer(t, idx));
+  } catch (error) {
+    console.error(
+      "Error fetching market value transfers via RapidAPI:",
+      error.message,
+    );
+    throw error;
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -554,4 +636,7 @@ module.exports = {
   getPlayerDetails,
   getTeamDetails,
   getMatchSummary,
+  searchPlayers,
+  getTopTransfers,
+  getMarketValueTransfers,
 };

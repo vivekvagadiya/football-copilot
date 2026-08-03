@@ -15,6 +15,7 @@ import {
   Volleyball,
 } from "lucide-react";
 import { apiService } from "../../services/apiService";
+import { NEWS, TRANSFERS } from "../../constants/mockData";
 import { Card } from "../../components/ui/Card";
 import { ScoreCard } from "../../components/football/ScoreCard";
 import { FixtureCard } from "../../components/football/FixtureCard";
@@ -27,6 +28,8 @@ import {
   getUpcomingMatchesApi,
   getStandingsApi,
   getPlayerLeaderboardApi,
+  getTopTransfersApi,
+  getMarketValueTransfersApi,
 } from "../../api/football.api";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
 
@@ -84,16 +87,33 @@ export const Dashboard = () => {
     staleTime: 1800000,
   });
 
-  // Keep news and transfers on local mock data
-  const { data: news = [], isLoading: loadingNews } = useQuery({
-    queryKey: ["news"],
-    queryFn: apiService.getNews,
+  // Fetch news using market value transfers with mock fallback
+  const { data: mvTransfersRaw = [], isLoading: loadingNews } = useQuery({
+    queryKey: ["newsTransfers"],
+    queryFn: () => getMarketValueTransfersApi(1),
   });
 
-  const { data: transfers = [], isLoading: loadingTransfers } = useQuery({
-    queryKey: ["transfers"],
-    queryFn: apiService.getTransfers,
+  const news = mvTransfersRaw.length > 0
+    ? mvTransfersRaw.map((t, idx) => ({
+        id: t.id || `news-${idx}`,
+        title: `${t.player} Market Value Transfer Update`,
+        summary: `${t.player} has moved from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
+        content: `${t.player} completed a transfer from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
+        date: t.date || "Recent",
+        reads: `${Math.floor(Math.random() * 20) + 5}K reads`,
+        image: idx % 2 === 0
+          ? "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=600&auto=format&fit=crop"
+          : "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop",
+      }))
+    : NEWS;
+
+  // Fetch top transfers with mock fallback
+  const { data: transfersRaw = [], isLoading: loadingTransfers } = useQuery({
+    queryKey: ["topTransfers"],
+    queryFn: () => getTopTransfersApi(1),
   });
+
+  const transfers = transfersRaw.length > 0 ? transfersRaw : TRANSFERS;
 
   const isLoading =
     loadingLive ||

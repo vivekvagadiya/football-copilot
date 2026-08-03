@@ -116,3 +116,25 @@ export const getMatchAiSummaryApi = async (matchId) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getTopTransfersApi = async (page = 1) => {
+  try {
+    const response = await axiosInstance.get("/football/transfers/top", {
+      params: { page },
+    });
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
+export const getMarketValueTransfersApi = async (page = 1) => {
+  try {
+    const response = await axiosInstance.get("/football/transfers/market-value", {
+      params: { page },
+    });
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

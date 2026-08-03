@@ -182,6 +182,26 @@ const searchPlayersController = async (req, res) => {
   }
 };
 
+const getTopTransfersController = async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const data = await footballService.getTopTransfers(page);
+    return apiResponse.success(res, "Top transfers fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
+const getMarketValueTransfersController = async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const data = await footballService.getMarketValueTransfers(page);
+    return apiResponse.success(res, "Market value transfers fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -196,4 +216,6 @@ module.exports = {
   getTeamDetailsController,
   getMatchSummaryController,
   searchPlayersController,
+  getTopTransfersController,
+  getMarketValueTransfersController,
 };

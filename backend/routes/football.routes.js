@@ -28,4 +28,6 @@ router.get(
 router.get("/players/search", cacheMiddleware(300), footballController.searchPlayersController);
 router.get("/players/:id", cacheMiddleware(900), footballController.getPlayerDetailsController);
 router.get("/teams/:id", cacheMiddleware(900), footballController.getTeamDetailsController);
+router.get("/transfers/top", cacheMiddleware(3600), footballController.getTopTransfersController);
+router.get("/transfers/market-value", cacheMiddleware(3600), footballController.getMarketValueTransfersController);
 module.exports = router;
