@@ -623,6 +623,54 @@ const getMarketValueTransfers = async (page = 1) => {
   }
 };
 
+const mapTrendingNews = (n, index) => {
+  // Format date
+  let dateText = "Recent";
+  if (n.gmtTime) {
+    const diffTime = Math.abs(new Date() - new Date(n.gmtTime));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffHours < 1) {
+      dateText = "Just now";
+    } else if (diffHours < 24) {
+      dateText = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    } else if (diffDays === 1) {
+      dateText = "Yesterday";
+    } else {
+      dateText = `${diffDays} days ago`;
+    }
+  }
+
+  return {
+    id: n.id || `news-${index}-${String(Math.random())}`,
+    title: n.title || "Football Update",
+    summary: `Reported by ${n.sourceStr || "Sports Intelligence"}. Read the full tactical briefing and breakdown details.`,
+    content:
+      n.title +
+      ` (Source: ${n.sourceStr || "Sports Intelligence"}). This trending story is capturing high interest across major leagues. Check back for live score updates and statistical analysis.`,
+    date: dateText,
+    reads: `${Math.floor(Math.random() * 40) + 10}K reads`,
+    image:
+      n.imageUrl ||
+      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=600&auto=format&fit=crop",
+  };
+};
+
+const getNews = async (page = 1) => {
+  try {
+    const response = await rapidFootballApi.get("/football-get-trendingnews");
+    const news = response.data?.response?.news || [];
+    if (news.length === 0) {
+      return [];
+    }
+    return news.map((n, idx) => mapTrendingNews(n, idx));
+  } catch (error) {
+    console.error("Error fetching trending news via RapidAPI:", error.message);
+    return [];
+  }
+};
+
 module.exports = {
   getLiveMatches,
   getStanding,
@@ -639,4 +687,5 @@ module.exports = {
   searchPlayers,
   getTopTransfers,
   getMarketValueTransfers,
+  getNews,
 };

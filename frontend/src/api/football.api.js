@@ -138,3 +138,14 @@ export const getMarketValueTransfersApi = async (page = 1) => {
     throw error?.errors?.[0] || error;
   }
 };
+
+export const getNewsApi = async (page = 1) => {
+  try {
+    const response = await axiosInstance.get("/football/news", {
+      params: { page },
+    });
+    return response?.data?.data || [];
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};

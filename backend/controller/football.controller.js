@@ -202,6 +202,16 @@ const getMarketValueTransfersController = async (req, res) => {
   }
 };
 
+const getNewsController = async (req, res) => {
+  try {
+    const page = req.query.page || 1;
+    const data = await footballService.getNews(page);
+    return apiResponse.success(res, "News fetched successfully", data);
+  } catch (error) {
+    return apiResponse.error(res, error.message);
+  }
+};
+
 module.exports = {
   getLiveMatchesController,
   getStandingController,
@@ -218,4 +228,5 @@ module.exports = {
   searchPlayersController,
   getTopTransfersController,
   getMarketValueTransfersController,
+  getNewsController,
 };

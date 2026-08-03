@@ -2,7 +2,6 @@ import React, { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDropzone } from "react-dropzone";
 import { ArrowRightLeft, UploadCloud, FileSpreadsheet } from "lucide-react";
-import { apiService } from "../../services/apiService";
 import { TRANSFERS } from "../../constants/mockData";
 import { getTopTransfersApi } from "../../api/football.api";
 import { Loading } from "../../components/ui/Loading";

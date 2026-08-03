@@ -14,7 +14,6 @@ import {
   Trophy,
   Volleyball,
 } from "lucide-react";
-import { apiService } from "../../services/apiService";
 import { NEWS, TRANSFERS } from "../../constants/mockData";
 import { Card } from "../../components/ui/Card";
 import { ScoreCard } from "../../components/football/ScoreCard";
@@ -30,6 +29,7 @@ import {
   getPlayerLeaderboardApi,
   getTopTransfersApi,
   getMarketValueTransfersApi,
+  getNewsApi,
 } from "../../api/football.api";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
 
@@ -87,25 +87,11 @@ export const Dashboard = () => {
     staleTime: 1800000,
   });
 
-  // Fetch news using market value transfers with mock fallback
-  const { data: mvTransfersRaw = [], isLoading: loadingNews } = useQuery({
-    queryKey: ["newsTransfers"],
-    queryFn: () => getMarketValueTransfersApi(1),
+  // Fetch news using news API
+  const { data: news = [], isLoading: loadingNews } = useQuery({
+    queryKey: ["news"],
+    queryFn: () => getNewsApi(1),
   });
-
-  const news = mvTransfersRaw.length > 0
-    ? mvTransfersRaw.map((t, idx) => ({
-        id: t.id || `news-${idx}`,
-        title: `${t.player} Market Value Transfer Update`,
-        summary: `${t.player} has moved from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
-        content: `${t.player} completed a transfer from ${t.fromClub} to ${t.toClub} for a fee of ${t.fee}.`,
-        date: t.date || "Recent",
-        reads: `${Math.floor(Math.random() * 20) + 5}K reads`,
-        image: idx % 2 === 0
-          ? "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=600&auto=format&fit=crop"
-          : "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop",
-      }))
-    : NEWS;
 
   // Fetch top transfers with mock fallback
   const { data: transfersRaw = [], isLoading: loadingTransfers } = useQuery({
@@ -221,7 +207,7 @@ export const Dashboard = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {news.slice(0, 2).map((n) => (
+              {news.slice(0, 8).map((n) => (
                 <Card
                   key={n.id}
                   onClick={() => navigate("/news")}
@@ -509,7 +495,7 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            <div className="space-y-0">
+            <div className="">
               {loadingLeaderboard ? (
                 <div className="space-y-3 py-4 px-2">
                   <div className="h-4 bg-border/20 rounded animate-pulse w-full" />
@@ -576,7 +562,7 @@ export const Dashboard = () => {
               </Link>
             </div>
             <div className="space-y-3">
-              {transfers.slice(0, 1).map((t) => (
+              {transfers.slice(0, 2).map((t) => (
                 <TransferCard key={t.id} transfer={t} />
               ))}
             </div>
