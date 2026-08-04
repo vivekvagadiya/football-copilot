@@ -4,13 +4,6 @@ const MatchSummary = require("../models/matchSummary.model");
 const NewsSummary = require("../models/newsSummary.model");
 const aiService = require("./ai.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
-const {
-  MOCK_LIVE_MATCHES,
-  MOCK_UPCOMING_MATCHES,
-  MOCK_STANDINGS,
-  MOCK_SCORERS,
-  MOCK_MATCH_DETAILS,
-} = require("./mockData");
 
 const formatMatchDate = (utcDateStr) => {
   if (!utcDateStr) return "";
@@ -117,7 +110,7 @@ const getLiveMatches = async () => {
       "⚠️ [football.service] getLiveMatches API failed, falling back to mock:",
       err.message,
     );
-    return MOCK_LIVE_MATCHES;
+    return [];
   }
 };
 
@@ -150,7 +143,7 @@ const getStanding = async (leagueCode = "PL", season, limit = 10) => {
       `⚠️ [football.service] getStanding API failed for ${leagueCode} (season: ${season}), falling back to mock:`,
       err.message,
     );
-    return MOCK_STANDINGS;
+    return [];
   }
 };
 
@@ -208,10 +201,7 @@ const upcomingMatches = async (
     );
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
     const parsedOffset = offset ? parseInt(offset, 10) : 0;
-    return MOCK_UPCOMING_MATCHES.slice(
-      parsedOffset,
-      parsedOffset + parsedLimit,
-    );
+    return [];
   }
 };
 
@@ -269,7 +259,7 @@ const playerLeaderboard = async (competition = "PL", season, limit = 20) => {
       "⚠️ [football.service] playerLeaderboard API failed, falling back to mock:",
       err.message,
     );
-    return MOCK_SCORERS;
+    return [];
   }
 };
 
@@ -338,7 +328,7 @@ const getMatchDetails = async (matchId) => {
   } catch (error) {
     console.error("Error fetching match details:", error);
     // Return the corresponding mock match if it exists, otherwise default to m1 live match
-    return MOCK_MATCH_DETAILS[matchId] || MOCK_MATCH_DETAILS["m1"];
+    return [];
   }
 };
 

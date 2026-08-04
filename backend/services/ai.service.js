@@ -92,7 +92,7 @@ const generateChatResponse = async (prompt, history = []) => {
           systemInstruction: SYSTEM_INSTRUCTION,
           tools: footballTools,
           temperature: 0.7,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 500,
         },
       });
 
@@ -123,8 +123,10 @@ const generateChatResponse = async (prompt, history = []) => {
 
         if (toolRegistry[functionName]) {
           try {
+            logger.info(`[Tool Calling] Executing tool '${functionName}' with args:`, functionArgs);
             const executionResult =
               await toolRegistry[functionName](functionArgs);
+            logger.info(`[Tool Calling] Tool '${functionName}' executed successfully. Result:`, executionResult);
 
             toolResponseParts.push({
               functionResponse: {
@@ -133,7 +135,7 @@ const generateChatResponse = async (prompt, history = []) => {
               },
             });
           } catch (execErr) {
-            logger.error(`Error executing tool ${functionName}:`, execErr);
+            logger.error(`[Tool Calling] Error executing tool '${functionName}':`, execErr);
             toolResponseParts.push({
               functionResponse: {
                 name: functionName,
@@ -142,6 +144,7 @@ const generateChatResponse = async (prompt, history = []) => {
             });
           }
         } else {
+          logger.warn(`[Tool Calling] Tool '${functionName}' requested by AI is not registered in toolRegistry.`);
           toolResponseParts.push({
             functionResponse: {
               name: functionName,
@@ -196,7 +199,7 @@ ${JSON.stringify(matchData, null, 2)}`;
         systemInstruction:
           "You are an elite football sports writer and tactical analyst. Generate a structured match summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Match Analysis, ### 🔑 Turning Points, ### 🏆 Standout Performers). Keep bullet points concise and stats accurate.",
         temperature: 0.6,
-        maxOutputTokens: 1200,
+        maxOutputTokens: 500,
       },
     });
 
@@ -243,7 +246,7 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
         systemInstruction:
           "You are an elite football sports writer and tactical analyst. Generate a structured AI news summary in markdown format with clear, engaging, and professional headers (e.g. ### ⚡ Executive Summary, ### 📌 Key Bullet Points, ### 🔮 Future Outlook & Implications). Keep bullet points concise and details accurate.",
         temperature: 0.6,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 500,
       },
     });
 
