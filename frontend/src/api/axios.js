@@ -9,6 +9,42 @@ export const setToastHandler = (handler) => {
   toastHandler = handler;
 };
 
+/**
+ * Extracts a human-friendly error message from a raw error response message,
+ * especially handling stringified Google GenAI/Gemini quota errors.
+ */
+const getCleanErrorMessage = (msg) => {
+  if (!msg) return "Something went wrong";
+
+  if (typeof msg === "string" && msg.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(msg);
+      if (parsed.error?.message) {
+        const cleanMsg = parsed.error.message;
+
+        // Check if it's a Rate Limit / Resource Exhausted error
+        if (parsed.error.status === "RESOURCE_EXHAUSTED" || parsed.error.code === 429) {
+          const retryMatch = cleanMsg.match(/Please retry in (\d+(\.\d+)?s)/i);
+          const seconds = retryMatch ? Math.round(parseFloat(retryMatch[1])) : null;
+
+          const baseMsg = "Gemini API quota exceeded.";
+          if (seconds) {
+            return `${baseMsg} Please retry in ${seconds}s.`;
+          }
+          return baseMsg;
+        }
+
+        // Default cleanup (remove URL details to keep toaster clean)
+        return cleanMsg.replace(/For more information.*$/gi, "").trim();
+      }
+    } catch (e) {
+      // Fail silent, return raw message if parsing fails
+    }
+  }
+
+  return msg;
+};
+
 const showToast = (type, message, options = {}) => {
   if (type === "success") {
     toast.success(message, options);
@@ -90,12 +126,13 @@ axiosInstance.interceptors.response.use(
     }
 
     const status = error.response.status;
-    const errorMessage = error.response.data?.message || "Something went wrong";
+    const rawErrorMessage = error.response.data?.message || "Something went wrong";
+    const errorMessage = getCleanErrorMessage(rawErrorMessage);
 
     // 2. LOGOUT LOGIC (Session Versioning / Refresh Failed)
     // We handle the specific 401 redirect errors in the catch block below.
 
-    // 3. OTHER ERRORS (403, 400, 404, 500)
+    // 3. OTHER ERRORS (403, 400, 404, 500, 429)
     // We ignore 401 here because it might be refreshed successfully.
     if (status !== 401) {
       // Enhanced error handling with specific messages
@@ -110,13 +147,16 @@ axiosInstance.interceptors.response.use(
         case 404:
           errorTitle = "Not Found";
           break;
+        case 429:
+          errorTitle = "Rate Limit Exceeded";
+          break;
         case 500:
           errorTitle = "Server Error";
           break;
       }
 
       showToast("error", `${errorTitle}: ${errorMessage}`, {
-        duration: status === 500 ? 6000 : 4000, // Longer duration for server errors
+        duration: status === 500 || status === 429 ? 6000 : 4000, // Longer duration for rate limits/server errors
       });
       return Promise.reject(error.response?.data || error);
     }

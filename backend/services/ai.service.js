@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require("@google/genai");
 const logger = require("../config/logger");
-const footballService = require("./football.service");
+
 const apiKey = process.env.GEMINI_API_KEY;
 
 let aiClient = null;
@@ -9,20 +9,82 @@ if (apiKey) {
 } else {
   logger.warn("GEMINI_API_KEY is not configured in backend .env");
 }
-const toolRegistry = {
-  getLiveMatches: async () => {
-    return await footballService.getLiveMatches();
+
+/**
+ * Registry of all tools available to the AI model.
+ * Each tool defines both its schema (for Gemini) and its execution handler (for the backend).
+ * This acts as the single source of truth for all tools.
+ */
+const toolsRegistry = [
+  {
+    schema: {
+      name: "getLiveMatches",
+      description:
+        "Fetch live matches happening right now with scores, teams, and elapsed time.",
+      parameters: { type: "OBJECT", properties: {} },
+    },
+    handler: async () => {
+      const footballService = require("./football.service");
+      return await footballService.getLiveMatches();
+    },
   },
-  getStanding: async (args) => {
-    return await footballService.getStanding(args.leagueCode);
+  {
+    schema: {
+      name: "getStanding",
+      description: "Fetch league standings/table for a specific competition.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          leagueCode: {
+            type: "STRING",
+            description:
+              "The code of the league (PL for Premier League, PD for La Liga, SA for Serie A, BL1 for Bundesliga, FL1 for Ligue 1, CL for Champions League).",
+          },
+        },
+        required: ["leagueCode"],
+      },
+    },
+    handler: async (args) => {
+      const footballService = require("./football.service");
+      return await footballService.getStanding(args.leagueCode);
+    },
   },
-  getPlayerDetails: async (args) => {
-    return await footballService.getPlayerDetails(args.playerId);
+  {
+    schema: {
+      name: "searchPlayers",
+      description:
+        "Search for football players by name to find their ID and details.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: {
+            type: "STRING",
+            description: "The search query (e.g. Messi, Haaland).",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    handler: async (args) => {
+      const footballService = require("./football.service");
+      return await footballService.searchPlayers(args.query);
+    },
   },
-  searchPlayers: async (args) => {
-    return await footballService.searchPlayers(args.query);
+];
+
+// Generate the configuration array expected by the Gemini API
+const footballTools = [
+  {
+    functionDeclarations: toolsRegistry.map((tool) => tool.schema),
   },
-};
+];
+
+// Map function names to their executable handlers for O(1) dispatcher lookups
+const toolHandlers = toolsRegistry.reduce((map, tool) => {
+  map[tool.schema.name] = tool.handler;
+  return map;
+}, {});
+
 const SYSTEM_INSTRUCTION = `You are Football Copilot, an elite AI sports analyst, tactical advisor, and football intelligence system.
 Your job is to provide clear, insightful, accurate, and structured responses regarding football matches, tactical setups, player statistics, team standings, transfers, and scouting.
 
@@ -32,20 +94,65 @@ Rules:
 3. If asked about non-football topics, politely redirect the conversation back to football and sports analytics.
 4. Provide objective, statistically sound analysis whenever discussing tactical comparisons or player scouting.`;
 
-// const SYSTEM_INSTRUCTION = `
-// You are Football Copilot.
+/**
+ * Executes a list of function calls requested by the AI model.
+ *
+ * @param {Array<Object>} functionCalls - The function calls requested by Gemini
+ * @returns {Promise<Array<Object>>} The results formatted as tool response parts
+ */
+const executeToolCalls = async (functionCalls) => {
+  const toolResponseParts = [];
 
-// Answer only football-related questions.
+  for (const call of functionCalls) {
+    const { name: functionName, args: functionArgs } = call;
+    const handler = toolHandlers[functionName];
 
-// Rules:
-// - Accurate, concise, and neutral.
-// - Prefer short answers.
-// - Expand only when requested.
-// - Use Markdown for lists or tables when helpful.
-// - Never fabricate facts or statistics.
-// - If information is unavailable, say so.
-// - Redirect unrelated questions back to football.
-// `;
+    if (!handler) {
+      logger.warn(
+        `[Tool Calling] Tool '${functionName}' requested by AI is not registered.`,
+      );
+      toolResponseParts.push({
+        functionResponse: {
+          name: functionName,
+          response: { error: `Tool '${functionName}' is not registered.` },
+        },
+      });
+      continue;
+    }
+
+    try {
+      logger.info(
+        `[Tool Calling] Executing tool '${functionName}' with args:`,
+        functionArgs,
+      );
+      const executionResult = await handler(functionArgs);
+      logger.info(
+        `[Tool Calling] Tool '${functionName}' executed successfully.`,
+      );
+
+      toolResponseParts.push({
+        functionResponse: {
+          name: functionName,
+          response: { result: executionResult },
+        },
+      });
+    } catch (execErr) {
+      logger.error(
+        `[Tool Calling] Error executing tool '${functionName}':`,
+        execErr,
+      );
+      toolResponseParts.push({
+        functionResponse: {
+          name: functionName,
+          response: { error: execErr.message || "Failed execution" },
+        },
+      });
+    }
+  }
+
+  return toolResponseParts;
+};
+
 /**
  * Generate a chat response using Google Gemini
  * @param {string} prompt - Current user message
@@ -92,7 +199,7 @@ const generateChatResponse = async (prompt, history = []) => {
           systemInstruction: SYSTEM_INSTRUCTION,
           tools: footballTools,
           temperature: 0.7,
-          maxOutputTokens: 500,
+          maxOutputTokens: 1000,
         },
       });
 
@@ -106,7 +213,7 @@ const generateChatResponse = async (prompt, history = []) => {
 
       // CASE B: Gemini requested one or more tool calls.
       logger.info(
-        `Gemini requested tool execution: ${JSON.stringify(response.functionCalls)}`,
+        `[Tool Calling] Gemini requested tool execution: ${JSON.stringify(response.functionCalls)}`,
       );
 
       // A) Save the model's call request to history so the conversation remains coherent
@@ -115,44 +222,8 @@ const generateChatResponse = async (prompt, history = []) => {
         parts: response.candidates[0].content.parts,
       });
 
-      // B) Execute each requested tool in parallel
-      const toolResponseParts = [];
-      for (const call of response.functionCalls) {
-        const functionName = call.name;
-        const functionArgs = call.args;
-
-        if (toolRegistry[functionName]) {
-          try {
-            logger.info(`[Tool Calling] Executing tool '${functionName}' with args:`, functionArgs);
-            const executionResult =
-              await toolRegistry[functionName](functionArgs);
-            logger.info(`[Tool Calling] Tool '${functionName}' executed successfully. Result:`, executionResult);
-
-            toolResponseParts.push({
-              functionResponse: {
-                name: functionName,
-                response: { result: executionResult },
-              },
-            });
-          } catch (execErr) {
-            logger.error(`[Tool Calling] Error executing tool '${functionName}':`, execErr);
-            toolResponseParts.push({
-              functionResponse: {
-                name: functionName,
-                response: { error: execErr.message || "Failed execution" },
-              },
-            });
-          }
-        } else {
-          logger.warn(`[Tool Calling] Tool '${functionName}' requested by AI is not registered in toolRegistry.`);
-          toolResponseParts.push({
-            functionResponse: {
-              name: functionName,
-              response: { error: `Tool ${functionName} is not registered.` },
-            },
-          });
-        }
-      }
+      // B) Execute each requested tool using the executor runner
+      const toolResponseParts = await executeToolCalls(response.functionCalls);
 
       // C) Send the tool execution output back to Gemini's context
       contents.push({
@@ -260,62 +331,6 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
     throw error;
   }
 };
-
-// Add this to your ai.service.js file
-const footballTools = [
-  {
-    functionDeclarations: [
-      {
-        name: "getLiveMatches",
-        description:
-          "Fetch live matches happening right now with scores, teams, and elapsed time.",
-        parameters: { type: "OBJECT", properties: {} },
-      },
-      {
-        name: "getStanding",
-        description: "Fetch league standings/table for a specific competition.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            leagueCode: {
-              type: "STRING",
-              description:
-                "The code of the league (PL for Premier League, PD for La Liga, SA for Serie A, BL1 for Bundesliga, FL1 for Ligue 1, CL for Champions League).",
-            },
-          },
-          required: ["leagueCode"],
-        },
-      },
-      {
-        name: "getPlayerDetails",
-        description:
-          "Fetch details, stats, current team, and transfers for a specific player by their ID.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            playerId: { type: "STRING", description: "The unique player ID." },
-          },
-          required: ["playerId"],
-        },
-      },
-      {
-        name: "searchPlayers",
-        description:
-          "Search for football players by name to find their ID and details.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            query: {
-              type: "STRING",
-              description: "The search query (e.g. Messi, Haaland).",
-            },
-          },
-          required: ["query"],
-        },
-      },
-    ],
-  },
-];
 
 module.exports = {
   generateChatResponse,

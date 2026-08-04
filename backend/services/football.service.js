@@ -2,7 +2,6 @@ const footballApi = require("./footballApi.service");
 const rapidFootballApi = require("./rapidFootballApi.service");
 const MatchSummary = require("../models/matchSummary.model");
 const NewsSummary = require("../models/newsSummary.model");
-const aiService = require("./ai.service");
 const { DEFAULT_COMPETITIONS } = require("../utils/constants");
 
 const formatMatchDate = (utcDateStr) => {
@@ -370,6 +369,7 @@ const getMatchSummary = async (matchId) => {
 
         let summaryText;
         if (shouldGenerateAI) {
+          const aiService = require("./ai.service");
           summaryText =
             await aiService.generateMatchSummaryResponse(matchDetails);
         } else {
@@ -581,7 +581,13 @@ const searchPlayers = async (searchQuery) => {
     const response = await rapidFootballApi.get("/football-players-search", {
       params: { search: searchQuery },
     });
-    return response.data || null;
+    const suggestions = response.data?.response?.suggestions || [];
+    return suggestions.map((s) => ({
+      id: s.id,
+      name: s.name,
+      team: s.teamName || "N/A",
+      type: s.type || "player",
+    }));
   } catch (error) {
     console.error("Error searching players via RapidAPI:", error.message);
     throw error;
@@ -686,6 +692,7 @@ const getNewsSummary = async (newsId) => {
   }
 
   try {
+    const aiService = require("./ai.service");
     const summaryText = await aiService.generateNewsSummaryResponse(newsItem);
 
     if (!cachedSummary) {
