@@ -594,6 +594,64 @@ const searchPlayers = async (searchQuery) => {
   }
 };
 
+const searchLeagues = async (searchQuery) => {
+  try {
+    const response = await rapidFootballApi.get("/football-leagues-search", {
+      params: { search: searchQuery },
+    });
+    const suggestions = response.data?.response?.suggestions || [];
+    return suggestions.map((s) => ({
+      id: s.id,
+      name: s.name,
+      countryCode: s.ccode || "N/A",
+    }));
+  } catch (error) {
+    console.error("Error searching leagues via RapidAPI:", error.message);
+    throw error;
+  }
+};
+
+const searchTeams = async (searchQuery) => {
+  try {
+    const response = await rapidFootballApi.get("/football-teams-search", {
+      params: { search: searchQuery },
+    });
+    const suggestions = response.data?.response?.suggestions || [];
+    return suggestions.map((s) => ({
+      id: s.id,
+      name: s.name,
+      league: s.leagueName || "N/A",
+      leagueId: s.leagueId || null,
+    }));
+  } catch (error) {
+    console.error("Error searching teams via RapidAPI:", error.message);
+    throw error;
+  }
+};
+
+const searchMatches = async (searchQuery) => {
+  try {
+    const response = await rapidFootballApi.get("/football-matches-search", {
+      params: { search: searchQuery },
+    });
+    const suggestions = response.data?.response?.suggestions || [];
+    return suggestions.map((s) => ({
+      id: s.id,
+      homeTeam: s.homeTeamName,
+      homeTeamId: s.homeTeamId,
+      awayTeam: s.awayTeamName,
+      awayTeamId: s.awayTeamId,
+      matchDate: s.matchDate,
+      league: s.leagueName || "N/A",
+      leagueId: s.leagueId || null,
+      status: s.status || {},
+    }));
+  } catch (error) {
+    console.error("Error searching matches via RapidAPI:", error.message);
+    throw error;
+  }
+};
+
 const getTopTransfers = async (page = 1) => {
   try {
     const response = await rapidFootballApi.get("/football-get-top-transfers", {
@@ -731,6 +789,9 @@ module.exports = {
   getTeamDetails,
   getMatchSummary,
   searchPlayers,
+  searchLeagues,
+  searchTeams,
+  searchMatches,
   getTopTransfers,
   getMarketValueTransfers,
   getNews,

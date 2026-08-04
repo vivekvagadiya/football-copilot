@@ -70,6 +70,69 @@ const toolsRegistry = [
       return await footballService.searchPlayers(args.query);
     },
   },
+  {
+    schema: {
+      name: "searchLeagues",
+      description:
+        "Search for football leagues/competitions by name to find their ID and details.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: {
+            type: "STRING",
+            description: "The search query (e.g. Premier League, La Liga).",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    handler: async (args) => {
+      const footballService = require("./football.service");
+      return await footballService.searchLeagues(args.query);
+    },
+  },
+  {
+    schema: {
+      name: "searchTeams",
+      description:
+        "Search for football teams/clubs by name to find their ID and details.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: {
+            type: "STRING",
+            description: "The search query (e.g. Chelsea, Real Madrid).",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    handler: async (args) => {
+      const footballService = require("./football.service");
+      return await footballService.searchTeams(args.query);
+    },
+  },
+  {
+    schema: {
+      name: "searchMatches",
+      description:
+        "Search for football matches by team names or competition name to find matching scheduled, live, or finished matches.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: {
+            type: "STRING",
+            description: "The search query (e.g. Arsenal vs Chelsea, Barcelona).",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    handler: async (args) => {
+      const footballService = require("./football.service");
+      return await footballService.searchMatches(args.query);
+    },
+  },
 ];
 
 // Generate the configuration array expected by the Gemini API
@@ -95,15 +158,13 @@ Rules:
 4. Provide objective, statistically sound analysis whenever discussing tactical comparisons or player scouting.`;
 
 /**
- * Executes a list of function calls requested by the AI model.
+ * Executes a list of function calls requested by the AI model in parallel.
  *
  * @param {Array<Object>} functionCalls - The function calls requested by Gemini
  * @returns {Promise<Array<Object>>} The results formatted as tool response parts
  */
 const executeToolCalls = async (functionCalls) => {
-  const toolResponseParts = [];
-
-  for (const call of functionCalls) {
+  const promises = functionCalls.map(async (call) => {
     const { name: functionName, args: functionArgs } = call;
     const handler = toolHandlers[functionName];
 
@@ -111,18 +172,17 @@ const executeToolCalls = async (functionCalls) => {
       logger.warn(
         `[Tool Calling] Tool '${functionName}' requested by AI is not registered.`,
       );
-      toolResponseParts.push({
+      return {
         functionResponse: {
           name: functionName,
           response: { error: `Tool '${functionName}' is not registered.` },
         },
-      });
-      continue;
+      };
     }
 
     try {
       logger.info(
-        `[Tool Calling] Executing tool '${functionName}' with args:`,
+        `[Tool Calling] Executing tool '${functionName}' in parallel with args:`,
         functionArgs,
       );
       const executionResult = await handler(functionArgs);
@@ -130,27 +190,27 @@ const executeToolCalls = async (functionCalls) => {
         `[Tool Calling] Tool '${functionName}' executed successfully.`,
       );
 
-      toolResponseParts.push({
+      return {
         functionResponse: {
           name: functionName,
           response: { result: executionResult },
         },
-      });
+      };
     } catch (execErr) {
       logger.error(
         `[Tool Calling] Error executing tool '${functionName}':`,
         execErr,
       );
-      toolResponseParts.push({
+      return {
         functionResponse: {
           name: functionName,
           response: { error: execErr.message || "Failed execution" },
         },
-      });
+      };
     }
-  }
+  });
 
-  return toolResponseParts;
+  return await Promise.all(promises);
 };
 
 /**
