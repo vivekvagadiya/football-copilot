@@ -34,6 +34,7 @@ const endpoints = {
   },
   ai: {
     chat: "/ai/chat",
+    recommendations: "/ai/recommendations",
   }
 };
 

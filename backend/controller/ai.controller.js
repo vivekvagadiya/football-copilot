@@ -1,6 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const apiResponse = require("../utils/apiResponse");
 const aiService = require("../services/ai.service");
+const recommendationService = require("../services/recommendation.service");
 
 const chat = asyncHandler(async (req, res) => {
   const { prompt, history } = req.body;
@@ -16,6 +17,13 @@ const chat = asyncHandler(async (req, res) => {
   });
 });
 
+const getRecommendations = asyncHandler(async (req, res) => {
+  const data = await recommendationService.getAIRecommendations(req.user._id);
+  return apiResponse.success(res, "AI recommendations fetched successfully", data);
+});
+
 module.exports = {
   chat,
+  getRecommendations,
 };
+

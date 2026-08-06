@@ -15,3 +15,13 @@ export const sendAiChatApi = async ({ prompt, history = [] }) => {
   });
   return response.data;
 };
+
+export const getAiRecommendationsApi = async () => {
+  try {
+    const response = await axiosInstance.get(endpoints.ai.recommendations);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+

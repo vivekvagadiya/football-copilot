@@ -10,9 +10,15 @@ import { Button } from '../../components/ui/Button';
 import { AIResponseCard } from '../../components/ai/AIResponseCard';
 import { useApp } from '../../context/AppContext';
 import { Drawer } from '../../components/ui/Drawer';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+// Keep track of processed prompt keys to prevent double-execution in StrictMode
+const processedPrompts = new Set();
 
 export const AIChat = () => {
   const { user } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
   const userLetter = user?.username ? user.username[0].toUpperCase() : 'U';
 
   const [threads, setThreads] = useState(() => {
@@ -202,6 +208,26 @@ export const AIChat = () => {
       }));
     }
   };
+
+  // Handle initialPrompt from navigation state (AI Recommendations)
+  useEffect(() => {
+    const promptText = location.state?.initialPrompt;
+    const transitionKey = `${location.key || 'default'}-${promptText}`;
+
+    if (promptText && !processedPrompts.has(transitionKey)) {
+      processedPrompts.add(transitionKey);
+      
+      // Clean up older keys to prevent potential memory leak
+      if (processedPrompts.size > 20) {
+        const firstKey = processedPrompts.values().next().value;
+        processedPrompts.delete(firstKey);
+      }
+
+      // Clear location state using react-router's navigate replace to update router context
+      navigate(location.pathname, { replace: true, state: {} });
+      handleSendMessage(promptText);
+    }
+  }, [location.state, location.key, navigate]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {

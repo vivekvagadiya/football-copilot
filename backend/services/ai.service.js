@@ -122,7 +122,8 @@ const toolsRegistry = [
         properties: {
           query: {
             type: "STRING",
-            description: "The search query (e.g. Arsenal vs Chelsea, Barcelona).",
+            description:
+              "The search query (e.g. Arsenal vs Chelsea, Barcelona).",
           },
         },
         required: ["query"],
@@ -259,7 +260,7 @@ const generateChatResponse = async (prompt, history = []) => {
           systemInstruction: SYSTEM_INSTRUCTION,
           tools: footballTools,
           temperature: 0.7,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 500,
         },
       });
 
@@ -392,9 +393,81 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
   }
 };
 
+/**
+ * Generate structured recommendations using Gemini AI
+ * @param {Array} favorites - User favorites list
+ * @param {Array} matches - Live/upcoming matches list
+ * @param {Array} news - News items list
+ * @returns {Promise<Object>} AI reasoned recommendation object
+ */
+const generateRecommendationsResponse = async (favorites, matches, news) => {
+  if (!aiClient) {
+    throw new Error("Gemini API key is missing in server environment.");
+  }
+
+  const prompt = `Generate a personalized football briefing and recommendation set based on the user's favorites and the current football context.
+  
+User's Favorites:
+${JSON.stringify(favorites, null, 2)}
+
+Current Live/Upcoming Matches:
+${JSON.stringify(matches, null, 2)}
+
+Recent News:
+${JSON.stringify(news, null, 2)}
+
+You must return a structured JSON response matching this schema:
+{
+  "briefing": "A concise, engaging 1-2 sentence dashboard briefing text updating them on their favorites or high-stakes matches today. Avoid generic text.",
+  "recommendedMatches": [
+    {
+      "matchId": "string (the match id from the matches list)",
+      "reason": "Clear explanation of why they should watch this match, referencing their favorite team, league, players, or general excitement/significance.",
+      "excitementRating": number (rating from 1 to 10)
+    }
+  ],
+  "scoutingReport": {
+    "targetTeam": "string (one of user's favorite teams, or if none, a default high-profile team like Chelsea, Real Madrid, Arsenal)",
+    "playerName": "string (a recommended player to sign or watch)",
+    "position": "string (player's position)",
+    "marketValue": "string (estimated value, e.g. €50M)",
+    "fitReasoning": "A detailed 1-2 sentence tactical justification of why this player fits the targetTeam's style of play or squad needs."
+  },
+  "suggestedPrompts": [
+    "A string prompt the user could ask Football Copilot related to these recommendations, e.g., 'Tell me more about [PlayerName]'s tactical fit at [Team]'"
+  ]
+}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await aiClient.models.generateContent({
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction:
+          "You are an elite football director, scout, and tactical analyst. You generate personalized recommendations and briefings. You must respond ONLY with a valid JSON object matching the requested schema.",
+        temperature: 0.7,
+        responseMimeType: "application/json",
+      },
+    });
+
+    if (response && response.text) {
+      return JSON.parse(response.text);
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error("Error generating Gemini recommendations:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
   generateNewsSummaryResponse,
+  generateRecommendationsResponse,
   footballTools,
 };
