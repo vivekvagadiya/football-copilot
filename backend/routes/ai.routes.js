@@ -7,8 +7,12 @@ const cacheMiddleware = require("../middleware/cache.middleware");
 // Require authentication for AI chat
 router.post("/chat", authenticate, aiController.chat);
 
-// Require authentication and cache recommendations for 10 minutes
-router.get("/recommendations", authenticate, cacheMiddleware(600), aiController.getRecommendations);
+// Require authentication and cache recommendations for 1 hour
+router.get(
+  "/recommendations",
+  authenticate,
+  cacheMiddleware(3600),
+  aiController.getRecommendations,
+);
 
 module.exports = router;
-
