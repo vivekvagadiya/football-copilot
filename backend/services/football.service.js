@@ -154,11 +154,13 @@ const upcomingMatches = async (
   offset = 0,
   status,
   leagueId,
+  days = 10,
 ) => {
   try {
     const today = new Date();
+    const rangeDays = parseInt(days, 10) || 10;
     const dateToObj = new Date(today);
-    dateToObj.setDate(today.getDate() + 10);
+    dateToObj.setDate(today.getDate() + rangeDays);
 
     const formatDate = (date) => {
       const yyyy = date.getFullYear();
@@ -168,8 +170,8 @@ const upcomingMatches = async (
     };
 
     const params = {
-      dateFrom: dateFrom || "2026-08-18" || formatDate(today),
-      dateTo: dateTo || "2026-08-28" || formatDate(dateToObj),
+      dateFrom: dateFrom || formatDate(today),
+      dateTo: dateTo || formatDate(dateToObj),
     };
     console.log("params", params);
 
@@ -263,12 +265,12 @@ const playerLeaderboard = async (competition = "PL", season, limit = 20) => {
 };
 
 const getDashboardData = async (query = {}) => {
-  const { dateFrom, dateTo, league, season, competitions, limit, offset } =
+  const { dateFrom, dateTo, league, season, competitions, limit, offset, status, leagueId, days } =
     query;
   const [matchesRes, standingsRes, upcomingRes, playerRes] = await Promise.all([
     getLiveMatches(),
     getStanding(league || "PL", season),
-    upcomingMatches(dateFrom, dateTo, competitions, limit, offset),
+    upcomingMatches(dateFrom, dateTo, competitions, limit, offset, status, leagueId, days),
     playerLeaderboard(league || "PL", season),
   ]);
   return {

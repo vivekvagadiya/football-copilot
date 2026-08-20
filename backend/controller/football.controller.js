@@ -22,7 +22,7 @@ const getStandingController = async (req, res) => {
 
 const getUpcomingMatchesController = async (req, res) => {
   try {
-    const { dateFrom, dateTo, competitions, limit, offset, status, leagueId } =
+    const { dateFrom, dateTo, competitions, limit, offset, status, leagueId, days } =
       req.query;
     const data = await footballService.upcomingMatches(
       dateFrom,
@@ -32,6 +32,7 @@ const getUpcomingMatchesController = async (req, res) => {
       offset,
       status,
       leagueId,
+      days,
     );
     return apiResponse.success(
       res,

@@ -464,10 +464,78 @@ You must return a structured JSON response matching this schema:
   }
 };
 
+/**
+ * Generate structured intelligent notifications using Gemini AI
+ * @param {Array} favorites - User favorites list
+ * @param {Array} matches - Live/upcoming matches list
+ * @param {Array} news - News items list
+ * @returns {Promise<Array<Object>>} List of generated notification objects
+ */
+const generateNotificationsResponse = async (favorites, matches, news) => {
+  if (!aiClient) {
+    throw new Error("Gemini API key is missing in server environment.");
+  }
+
+  const prompt = `Evaluate the user's favorites and current live/upcoming matches and news, and generate 2-4 high-value intelligent notifications for the user's feed.
+
+User's Favorites:
+${JSON.stringify(favorites, null, 2)}
+
+Live & Upcoming Matches:
+${JSON.stringify(matches, null, 2)}
+
+Recent News:
+${JSON.stringify(news, null, 2)}
+
+You must return a structured JSON object containing an array of notifications:
+{
+  "notifications": [
+    {
+      "title": "Short title (e.g., 'Tactical Alert: Arsenal Setup' or 'Transfer Intel: Zubimendi')",
+      "message": "1-2 sentence concise summary highlighting key tactical angles, match momentum, or transfer news.",
+      "type": "one of: tactical, match, transfer, system, recommendation",
+      "priority": "one of: low, medium, high",
+      "meta": {
+        "matchId": "optional string match id",
+        "team": "optional string team name",
+        "player": "optional string player name"
+      }
+    }
+  ]
+}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await aiClient.models.generateContent({
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction:
+          "You are Football Copilot's intelligent broadcast monitor. You generate actionable, high-priority notifications tailored to user favorite teams and players. You must respond ONLY with a valid JSON object matching the requested schema.",
+        temperature: 0.7,
+        responseMimeType: "application/json",
+      },
+    });
+
+    if (response && response.text) {
+      const parsed = JSON.parse(response.text);
+      return parsed.notifications || [];
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error("Error generating Gemini notifications:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
   generateNewsSummaryResponse,
   generateRecommendationsResponse,
+  generateNotificationsResponse,
   footballTools,
 };

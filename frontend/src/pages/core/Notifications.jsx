@@ -1,14 +1,21 @@
-import React from 'react';
-import { Bell, Trash2, CheckCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, Trash2, CheckCheck, Sparkles } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { NotificationCard } from '../../components/football/NotificationCard';
 
 export const Notifications = () => {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, triggerAINotifications } = useApp();
+  const [isScanning, setIsScanning] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleScanAI = async () => {
+    setIsScanning(true);
+    await triggerAINotifications();
+    setIsScanning(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -17,19 +24,32 @@ export const Notifications = () => {
           <h2 className="font-display font-extrabold text-lg text-text flex items-center gap-2">
             <Bell size={18} className="text-primary" /> Alerts Feed Monitor
           </h2>
-          <p className="text-xs text-muted">Core broadcast channel for live goals, transfer news, and system status updates.</p>
+          <p className="text-xs text-muted">Core broadcast channel for live goals, tactical alerts, transfer intelligence, and AI briefings.</p>
         </div>
 
-        {unreadCount > 0 && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={markAllNotificationsAsRead}
-            className="text-xs gap-1.5"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleScanAI}
+            disabled={isScanning}
+            className="text-xs gap-1.5 bg-primary hover:bg-primary/90 text-text-on-accent"
           >
-            <CheckCheck size={14} /> Clear all alerts ({unreadCount})
+            <Sparkles size={14} className={isScanning ? "animate-spin" : ""} />
+            {isScanning ? "Scanning with Gaffer AI..." : "Scan with Gaffer AI"}
           </Button>
-        )}
+
+          {unreadCount > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={markAllNotificationsAsRead}
+              className="text-xs gap-1.5"
+            >
+              <CheckCheck size={14} /> Clear all ({unreadCount})
+            </Button>
+          )}
+        </div>
       </div>
 
       {notifications.length > 0 ? (

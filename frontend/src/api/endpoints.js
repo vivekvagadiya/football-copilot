@@ -35,7 +35,13 @@ const endpoints = {
   ai: {
     chat: "/ai/chat",
     recommendations: "/ai/recommendations",
-  }
+  },
+  notifications: {
+    get: "/notifications",
+    markRead: (id) => `/notifications/${id}/read`,
+    markAllRead: "/notifications/read-all",
+    generate: "/notifications/generate",
+  },
 };
 
 export default endpoints;

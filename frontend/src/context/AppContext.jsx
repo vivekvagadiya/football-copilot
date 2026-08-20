@@ -101,6 +101,36 @@ export const AppProvider = ({ children }) => {
     fetchFavoriteIds();
   }, [user]);
 
+  // Sync notifications with Backend API on mount/user change
+  const fetchBackendNotifications = async () => {
+    const { tokenService } = await import("../api/tokenService");
+    const token = tokenService.getAccessToken();
+    if (!token) return;
+
+    try {
+      const { getNotificationsApi } = await import("../api/notification.api");
+      const res = await getNotificationsApi();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map((n) => ({
+          id: n._id || n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type || "system",
+          priority: n.priority || "medium",
+          read: n.read || false,
+          time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
+        }));
+        setNotifications(mapped);
+      }
+    } catch (err) {
+      console.warn("Could not sync notifications with backend:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchBackendNotifications();
+  }, [user]);
+
   // Sync favorites to local storage
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify(favorites));
@@ -159,14 +189,61 @@ export const AppProvider = ({ children }) => {
     return list.some((item) => String(item) === String(id));
   };
 
-  const markNotificationAsRead = (id) => {
+  const markNotificationAsRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
+    try {
+      const { tokenService } = await import("../api/tokenService");
+      const token = tokenService.getAccessToken();
+      if (token && typeof id === "string" && !id.startsWith("nt-")) {
+        const { markNotificationReadApi } = await import("../api/notification.api");
+        await markNotificationReadApi(id);
+      }
+    } catch (err) {
+      console.warn("Error marking notification read on backend:", err.message);
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      const { tokenService } = await import("../api/tokenService");
+      const token = tokenService.getAccessToken();
+      if (token) {
+        const { markAllNotificationsReadApi } = await import("../api/notification.api");
+        await markAllNotificationsReadApi();
+      }
+    } catch (err) {
+      console.warn("Error marking all notifications read on backend:", err.message);
+    }
+  };
+
+  const triggerAINotifications = async () => {
+    try {
+      const { tokenService } = await import("../api/tokenService");
+      const token = tokenService.getAccessToken();
+      if (!token) return false;
+
+      const { generateNotificationsApi } = await import("../api/notification.api");
+      const res = await generateNotificationsApi();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map((n) => ({
+          id: n._id || n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type || "system",
+          priority: n.priority || "medium",
+          read: n.read || false,
+          time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
+        }));
+        setNotifications(mapped);
+        return true;
+      }
+    } catch (err) {
+      console.warn("Error generating AI notifications:", err.message);
+    }
+    return false;
   };
 
   const addNotification = (n) => {
@@ -193,6 +270,7 @@ export const AppProvider = ({ children }) => {
         notifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
+        triggerAINotifications,
         addNotification,
         isSearchOpen,
         setIsSearchOpen,
