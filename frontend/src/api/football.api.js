@@ -1,8 +1,10 @@
 import axiosInstance from "./axios";
 
-export const getLiveMatchesApi = async () => {
+export const getLiveMatchesApi = async (params) => {
   try {
-    const response = await axiosInstance.get("/football/matches/live");
+    const response = await axiosInstance.get("/football/matches/live", {
+      params,
+    });
     return response?.data?.data || [];
   } catch (error) {
     throw error?.errors?.[0] || error;

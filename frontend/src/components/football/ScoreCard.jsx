@@ -10,9 +10,10 @@ export const ScoreCard = ({ match }) => {
   const navigate = useNavigate();
   const { id, status, minute, homeTeam, awayTeam, leagueName, leagueLogo, date } = match;
 
-  const isLive = status === 'live';
-  const isUpcoming = status === 'upcoming';
-  const isFinished = status === 'finished';
+  const normStatus = (status || "").toLowerCase();
+  const isLive = normStatus === "live" || normStatus === "in_play" || normStatus === "paused";
+  const isUpcoming = normStatus === "upcoming" || normStatus === "scheduled" || normStatus === "timed";
+  const isFinished = normStatus === "finished";
 
   const handleCardClick = () => {
     navigate(`/match/${id}`);

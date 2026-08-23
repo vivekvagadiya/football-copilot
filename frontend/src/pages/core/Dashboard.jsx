@@ -36,11 +36,12 @@ export const Dashboard = () => {
   });
 
   // Fetch upcoming matches - cache for 10 minutes
-  const { data: upcomingMatchesRaw = [], isLoading: loadingUpcoming } = useQuery({
-    queryKey: ["upcomingMatches", "SCHEDULED"],
-    queryFn: () => getUpcomingMatchesApi({ status: "SCHEDULED" }),
-    staleTime: 600000,
-  });
+  const { data: upcomingMatchesRaw = [], isLoading: loadingUpcoming } =
+    useQuery({
+      queryKey: ["upcomingMatches", "SCHEDULED"],
+      queryFn: () => getUpcomingMatchesApi({ status: "SCHEDULED" }),
+      staleTime: 600000,
+    });
 
   const upcomingMatches = upcomingMatchesRaw.slice(0, 10);
 
@@ -74,10 +75,7 @@ export const Dashboard = () => {
   });
 
   const isLoading =
-    loadingLive ||
-    loadingUpcoming ||
-    loadingNews ||
-    loadingTransfers;
+    loadingLive || loadingUpcoming || loadingNews || loadingTransfers;
 
   if (isLoading) {
     return <Loading text="Assembling tactical widgets..." />;
@@ -95,15 +93,15 @@ export const Dashboard = () => {
           <DashboardLiveMatches liveMatches={liveMatches} />
           <DashboardUpcomingMatches upcomingMatches={upcomingMatches} />
           <DashboardNews news={news} onSelectNews={setSelectedNews} />
-        </div>
-
-        {/* Right Column (Sidebar widgets: AI Recommendations, Standings, Scorers, Transfers) */}
-        <div className="space-y-6">
           <DashboardAiRecommendations
             recommendations={recommendations}
             liveMatches={liveMatches}
             upcomingMatchesRaw={upcomingMatchesRaw}
           />
+        </div>
+
+        {/* Right Column (Sidebar widgets: AI Recommendations, Standings, Scorers, Transfers) */}
+        <div className="space-y-6">
           <DashboardStandings />
           <DashboardLeaderboard />
           <DashboardTransfers transfers={transfers} />

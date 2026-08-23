@@ -7,6 +7,7 @@ import { getPlayerLeaderboardApi } from "../../api/football.api";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
 
 const SEASONS = [
+  { value: "2026", label: "2026/2027" },
   { value: "2025", label: "2025/2026" },
   { value: "2024", label: "2024/2025" },
   { value: "2023", label: "2023/2024" },
@@ -17,7 +18,7 @@ const SEASONS = [
 export const DashboardLeaderboard = () => {
   const navigate = useNavigate();
   const [selectedScorerLeague, setSelectedScorerLeague] = useState("PL");
-  const [selectedScorerSeason, setSelectedScorerSeason] = useState("2025");
+  const [selectedScorerSeason, setSelectedScorerSeason] = useState("2026");
   const [isScorerLeagueDropdownOpen, setIsScorerLeagueDropdownOpen] =
     useState(false);
 

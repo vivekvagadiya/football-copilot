@@ -28,35 +28,96 @@ const formatMatchDate = (utcDateStr) => {
 };
 
 const mapMatch = (match) => {
-  const status = match.status;
-  const isLive = ["LIVE", "IN_PLAY", "PAUSED"].includes(status);
-  const isFinished = ["FINISHED"].includes(status);
-  const isUpcoming = ["SCHEDULED", "TIMED", "POSTPONED"].includes(status);
+  if (!match) return null;
+
+  const rawStatus = (match.status || "").toUpperCase();
+  const isLive = [
+    "LIVE",
+    "IN_PLAY",
+    "PAUSED",
+    "EXTRA_TIME",
+    "PENALTY_SHOOTOUT",
+    "HALFTIME",
+    "SUSPENDED",
+  ].includes(rawStatus);
+  const isFinished = ["FINISHED", "AWARDED"].includes(rawStatus);
+  const isUpcoming =
+    ["SCHEDULED", "TIMED", "POSTPONED", "CANCELLED"].includes(rawStatus) ||
+    (!isLive && !isFinished);
 
   let mappedStatus = "SCHEDULED";
   if (isLive) mappedStatus = "LIVE";
   else if (isFinished) mappedStatus = "FINISHED";
 
-  const minute = isLive ? 74 : null;
+  // Dynamic minute calculation for live matches
+  let minute = null;
+  if (isLive) {
+    if (match.minute !== undefined && match.minute !== null) {
+      minute = match.minute;
+    } else if (rawStatus === "PAUSED" || rawStatus === "HALFTIME") {
+      minute = 45;
+    } else if (match.utcDate) {
+      const startMs = new Date(match.utcDate).getTime();
+      const nowMs = Date.now();
+      const elapsed = Math.floor((nowMs - startMs) / 60000);
+      if (elapsed <= 0) {
+        minute = 1;
+      } else if (elapsed <= 45) {
+        minute = elapsed;
+      } else if (elapsed <= 60) {
+        minute = 45; // Halftime interval
+      } else {
+        minute = Math.min(90, Math.max(46, elapsed - 15));
+      }
+    } else {
+      minute = 1;
+    }
+  }
 
-  const homeScore = match.score?.fullTime?.home ?? (isUpcoming ? null : 0);
-  const awayScore = match.score?.fullTime?.away ?? (isUpcoming ? null : 0);
+  // Score resolution (handling live vs fulltime vs halftime)
+  let homeScore = null;
+  let awayScore = null;
+  if (!isUpcoming) {
+    homeScore =
+      match.score?.fullTime?.home ??
+      match.score?.regularTime?.home ??
+      match.score?.current?.home ??
+      match.score?.halfTime?.home ??
+      match.homeTeam?.score ??
+      0;
 
+    awayScore =
+      match.score?.fullTime?.away ??
+      match.score?.regularTime?.away ??
+      match.score?.current?.away ??
+      match.score?.halfTime?.away ??
+      match.awayTeam?.score ??
+      0;
+  }
+
+  // xG estimation
   let homeXG = null;
   let awayXG = null;
-  if (!isUpcoming) {
+  if (!isUpcoming && homeScore !== null && awayScore !== null) {
+    const idSeed =
+      typeof match.id === "number"
+        ? match.id
+        : parseInt(match.id, 10) || 1;
     homeXG = parseFloat(
-      (homeScore * 0.8 + 0.4 + (match.id % 5) * 0.1).toFixed(2),
+      (homeScore * 0.8 + 0.4 + (idSeed % 5) * 0.1).toFixed(2),
     );
     awayXG = parseFloat(
-      (awayScore * 0.8 + 0.3 + (match.id % 3) * 0.1).toFixed(2),
+      (awayScore * 0.8 + 0.3 + (idSeed % 3) * 0.1).toFixed(2),
     );
   }
 
+  // Win probability prediction for upcoming matches
   let prediction = null;
   if (isUpcoming) {
-    const hWeight = ((match.homeTeam?.name?.charCodeAt(0) || 0) % 50) + 20;
-    const aWeight = ((match.awayTeam?.name?.charCodeAt(0) || 0) % 40) + 20;
+    const homeName = match.homeTeam?.shortName || match.homeTeam?.name || "";
+    const awayName = match.awayTeam?.shortName || match.awayTeam?.name || "";
+    const hWeight = ((homeName.charCodeAt(0) || 0) % 50) + 20;
+    const aWeight = ((awayName.charCodeAt(0) || 0) % 40) + 20;
     const draw = 100 - hWeight - aWeight;
     prediction = {
       homeWin: hWeight,
@@ -65,29 +126,45 @@ const mapMatch = (match) => {
     };
   }
 
+  // Events (if present)
+  let events = [];
+  if (Array.isArray(match.events)) {
+    events = match.events;
+  } else if (Array.isArray(match.goals)) {
+    events = match.goals.map((g) => ({
+      type: "goal",
+      minute: g.minute || 0,
+      team: g.team?.id === match.homeTeam?.id ? "home" : "away",
+      player: g.scorer?.name || "Goal",
+      assist: g.assist?.name || "",
+      detail: g.type || "Goal",
+    }));
+  }
+
   return {
-    id: match.id.toString(),
-    leagueId: match.competition?.code || "PL",
-    leagueName: match.competition?.name || "Premier League",
-    leagueLogo: match.competition?.emblem || "",
+    id: (match.id || "").toString(),
+    leagueId: match.competition?.code || match.leagueId || "PL",
+    leagueName: match.competition?.name || match.leagueName || "Premier League",
+    leagueLogo: match.competition?.emblem || match.leagueLogo || "",
     status: mappedStatus,
     minute,
     homeTeam: {
-      id: match.homeTeam.id.toString(),
-      name: match.homeTeam.shortName || match.homeTeam.name,
-      logo: match.homeTeam.crest,
+      id: (match.homeTeam?.id || "").toString(),
+      name: match.homeTeam?.shortName || match.homeTeam?.name || "Home Team",
+      logo: match.homeTeam?.crest || match.homeTeam?.logo || "",
       score: homeScore,
       xG: homeXG,
     },
     awayTeam: {
-      id: match.awayTeam.id.toString(),
-      name: match.awayTeam.shortName || match.awayTeam.name,
-      logo: match.awayTeam.crest,
+      id: (match.awayTeam?.id || "").toString(),
+      name: match.awayTeam?.shortName || match.awayTeam?.name || "Away Team",
+      logo: match.awayTeam?.crest || match.awayTeam?.logo || "",
       score: awayScore,
       xG: awayXG,
     },
+    events,
     date: formatMatchDate(match.utcDate),
-    timestamp: match.utcDate,
+    timestamp: match.utcDate || "",
     prediction,
   };
 };
@@ -98,11 +175,65 @@ const mapMatch = (match) => {
 
 // --- Service Functions ---
 
-const getLiveMatches = async () => {
+const getLiveMatches = async (
+  dateFrom,
+  dateTo,
+  competitions,
+  limit = 10,
+  offset = 0,
+  status = "LIVE",
+  leagueId,
+  days,
+) => {
   try {
-    const matchesRes = await footballApi.get("/matches?limit=10&status=LIVE");
+    // Support if options are passed as an object or as positional arguments
+    let paramsObj = {};
+    if (typeof dateFrom === "object" && dateFrom !== null) {
+      paramsObj = dateFrom;
+    } else {
+      paramsObj = {
+        dateFrom,
+        dateTo,
+        competitions,
+        limit,
+        offset,
+        status: status || "LIVE",
+        leagueId,
+        days,
+      };
+    }
+
+    const {
+      dateFrom: dFrom,
+      dateTo: dTo,
+      competitions: comp,
+      limit: lim = 10,
+      offset: off = 0,
+      status: stat = "LIVE",
+      leagueId: lId,
+    } = paramsObj;
+
+    const params = {
+      status: stat && stat !== "all" ? stat : "LIVE",
+    };
+
+    if (dFrom) params.dateFrom = dFrom;
+    if (dTo) params.dateTo = dTo;
+
+    const compFilter =
+      lId || comp || DEFAULT_COMPETITIONS.join(",");
+    if (compFilter && compFilter !== "all") {
+      params.competitions = compFilter;
+    }
+
+    const parsedLimit = lim ? parseInt(lim, 10) : 10;
+    const parsedOffset = off ? parseInt(off, 10) : 0;
+    params.limit = 100;
+
+    console.log("Calling footballApi.get('/matches') for LIVE with params:", params);
+    const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
-    console.log("live calling");
+    console.log("live matches fetched:", rawMatches.length);
     return rawMatches.map(mapMatch);
   } catch (err) {
     console.error(

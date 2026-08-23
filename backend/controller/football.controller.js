@@ -3,7 +3,26 @@ const apiResponse = require("../utils/apiResponse");
 
 const getLiveMatchesController = async (req, res) => {
   try {
-    const data = await footballService.getLiveMatches();
+    const {
+      dateFrom,
+      dateTo,
+      competitions,
+      limit,
+      offset,
+      status,
+      leagueId,
+      days,
+    } = req.query;
+    const data = await footballService.getLiveMatches(
+      dateFrom,
+      dateTo,
+      competitions,
+      limit,
+      offset,
+      status,
+      leagueId,
+      days,
+    );
     return apiResponse.success(res, "Live matches fetched successfully", data);
   } catch (error) {
     return apiResponse.error(res, error.message);
