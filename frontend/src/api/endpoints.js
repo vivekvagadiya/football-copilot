@@ -5,27 +5,27 @@ const endpoints = {
     login: `/auth/login`,
     register: `/auth/register`,
     logout: `/auth/logout`,
-    profile:"/auth/me",
-    profileUpdate:"/auth/profile",
-    profileAvatar:"/auth/profile-avatar"
+    profile: "/auth/me",
+    profileUpdate: "/auth/profile",
+    profileAvatar: "/auth/profile-avatar",
   },
-  conversation:{
-    getConversations:"/conversations",
-    getConversationDetails:"/conversations/:conversationId",
-    startConversation:"/conversations",
-    markAsRead:"/conversations/:conversationId/read",
-    deleteConversation:"/conversations/:conversationId"
+  conversation: {
+    getConversations: "/conversations",
+    getConversationDetails: "/conversations/:conversationId",
+    startConversation: "/conversations",
+    markAsRead: "/conversations/:conversationId/read",
+    deleteConversation: "/conversations/:conversationId",
   },
-  group:{
-    getGroups:"/groups",
-    createGroup:"/groups",
-    getGroupDetails:"/groups/:groupId"
+  group: {
+    getGroups: "/groups",
+    createGroup: "/groups",
+    getGroupDetails: "/groups/:groupId",
   },
-  messages:{
-    getMessages:'/conversations/:conversationId/messages',
-    getGroupMessages:'/groups/:groupId/messages',
-    sendMessage:'/conversations/:conversationId/messages',
-    sendGroupMessage:'/groups/:groupId/messages'
+  messages: {
+    getMessages: "/conversations/:conversationId/messages",
+    getGroupMessages: "/groups/:groupId/messages",
+    sendMessage: "/conversations/:conversationId/messages",
+    sendGroupMessage: "/groups/:groupId/messages",
   },
   favorites: {
     toggle: "/favorites/toggle",
@@ -35,6 +35,10 @@ const endpoints = {
   ai: {
     chat: "/ai/chat",
     recommendations: "/ai/recommendations",
+    ragQuery: "/ai/rag/query",
+    ragDocuments: "/ai/rag/documents",
+    ragDocumentById: (id) => `/ai/rag/documents/${id}`,
+    ragIngest: "/ai/rag/ingest",
   },
   notifications: {
     get: "/notifications",

@@ -2,18 +2,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft,
-  RotateCcw, History, Plus, MessageSquareCode
+  RotateCcw, History, Plus, MessageSquareCode, BookOpen,
+  Database, Award, ShieldCheck, Filter, ChevronRight
 } from 'lucide-react';
-import { sendAiChatApi } from '../../api/ai.api';
+import { sendAiChatApi, sendRagQueryApi, getKnowledgeDocumentsApi } from '../../api/ai.api';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { AIResponseCard } from '../../components/ai/AIResponseCard';
+import { KnowledgeBaseDrawer } from '../../components/ai/KnowledgeBaseDrawer';
 import { useApp } from '../../context/AppContext';
 import { Drawer } from '../../components/ui/Drawer';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // Keep track of processed prompt keys to prevent double-execution in StrictMode
 const processedPrompts = new Set();
+
+const RAG_CATEGORIES = [
+  { id: 'all', label: 'All Knowledge' },
+  { id: 'tactics', label: 'Tactics' },
+  { id: 'rules', label: 'Rules & IFAB' },
+  { id: 'scouting', label: 'Scouting & xG' },
+  { id: 'history', label: 'History' },
+];
 
 export const AIChat = () => {
   const { user } = useApp();
@@ -26,23 +37,14 @@ export const AIChat = () => {
     return saved ? JSON.parse(saved) : [
       { 
         id: 'ch1', 
-        title: 'Arsenal vs City Decider', 
+        title: '3-2-4-1 Box Midfield Dynamics', 
         messages: [
-          { id: '1', sender: 'ai', text: "Loaded thread: **Arsenal vs City Decider**. Analysis parameters synchronized." }
-        ] 
-      },
-      { 
-        id: 'ch2', 
-        title: 'Deep-lying Playmaker scouting', 
-        messages: [
-          { id: '1', sender: 'ai', text: "Loaded thread: **Deep-lying Playmaker scouting**. Analysis parameters synchronized." }
-        ] 
-      },
-      { 
-        id: 'ch3', 
-        title: 'Haaland vs Yamal metrics', 
-        messages: [
-          { id: '1', sender: 'ai', text: "Loaded thread: **Haaland vs Yamal metrics**. Analysis parameters synchronized." }
+          { 
+            id: '1', 
+            sender: 'ai', 
+            text: "Tactical Intelligence synchronized. Ask me about **inverted fullbacks**, **half-space overloads**, **VAR clear & obvious error principles**, or **Premier League PSR thresholds**.",
+            isRag: true
+          }
         ] 
       }
     ];
@@ -56,6 +58,12 @@ export const AIChat = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+
+  // RAG Mode and Knowledge Base States
+  const [isRagMode, setIsRagMode] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isKnowledgeDrawerOpen, setIsKnowledgeDrawerOpen] = useState(false);
+  const [knowledgeDocCount, setKnowledgeDocCount] = useState(0);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -74,6 +82,16 @@ export const AIChat = () => {
       localStorage.removeItem('football_copilot_active_thread_id');
     }
   }, [activeThreadId]);
+
+  // Fetch count of knowledge documents
+  useEffect(() => {
+    getKnowledgeDocumentsApi({ limit: 1 })
+      .then((res) => {
+        const total = res?.data?.pagination?.total || 0;
+        setKnowledgeDocCount(total);
+      })
+      .catch(() => {});
+  }, []);
 
   // Cleanup typewriter interval on unmount
   useEffect(() => {
@@ -98,7 +116,7 @@ export const AIChat = () => {
     }
   }, [input]);
 
-  const streamAIResponse = (threadId, fullResponse) => {
+  const streamAIResponse = (threadId, fullResponse, sources = [], chunks = [], isRag = false) => {
     let currentText = '';
     const words = fullResponse.split(' ');
     let wordIdx = 0;
@@ -108,7 +126,17 @@ export const AIChat = () => {
       if (t.id === threadId) {
         return {
           ...t,
-          messages: [...t.messages, { id: tempId, sender: 'ai', text: '' }]
+          messages: [
+            ...t.messages, 
+            { 
+              id: tempId, 
+              sender: 'ai', 
+              text: '',
+              sources,
+              chunks,
+              isRag 
+            }
+          ]
         };
       }
       return t;
@@ -121,7 +149,11 @@ export const AIChat = () => {
           if (t.id === threadId) {
             return {
               ...t,
-              messages: t.messages.map(msg => msg.id === tempId ? { ...msg, text: currentText } : msg)
+              messages: t.messages.map(msg => 
+                msg.id === tempId 
+                  ? { ...msg, text: currentText, sources, chunks, isRag } 
+                  : msg
+              )
             };
           }
           return t;
@@ -131,7 +163,7 @@ export const AIChat = () => {
         clearInterval(interval);
         setIsTyping(false);
       }
-    }, 20);
+    }, 18);
 
     intervalRef.current = interval;
   };
@@ -147,7 +179,7 @@ export const AIChat = () => {
 
     if (!currentThreadId) {
       currentThreadId = `thread-${Date.now()}`;
-      const newThreadTitle = currentInput.length > 25 ? currentInput.substring(0, 25) + '...' : currentInput;
+      const newThreadTitle = currentInput.length > 28 ? currentInput.substring(0, 28) + '...' : currentInput;
       
       setThreads(prev => [
         {
@@ -174,8 +206,6 @@ export const AIChat = () => {
     }));
 
     try {
-      // Find the thread messages for context history
-      // Note: setThreads is asynchronous, so we extract history from activeThread list
       const activeTh = threads.find(t => t.id === currentThreadId);
       const historyContext = activeTh 
         ? [...activeTh.messages, userMessage]
@@ -183,13 +213,30 @@ export const AIChat = () => {
             .map(m => ({ sender: m.sender, text: m.text }))
         : [userMessage].map(m => ({ sender: m.sender, text: m.text }));
 
-      const res = await sendAiChatApi({
-        prompt: currentInput,
-        history: historyContext.slice(0, -1) // slice out latest user message since Gemini takes prompt separately
-      });
+      if (isRagMode) {
+        // Query Grounded RAG Pipeline
+        const res = await sendRagQueryApi({
+          query: currentInput,
+          history: historyContext.slice(0, -1),
+          category: selectedCategory !== 'all' ? selectedCategory : undefined,
+          topK: 4,
+        });
 
-      const responseText = res?.data?.response || res?.response || "Analysis complete.";
-      streamAIResponse(currentThreadId, responseText);
+        const answerText = res?.data?.answer || res?.answer || "Tactical intelligence analysis complete.";
+        const sources = res?.data?.sources || res?.sources || [];
+        const chunks = res?.data?.chunks || res?.chunks || [];
+
+        streamAIResponse(currentThreadId, answerText, sources, chunks, true);
+      } else {
+        // Standard General AI Chat
+        const res = await sendAiChatApi({
+          prompt: currentInput,
+          history: historyContext.slice(0, -1)
+        });
+
+        const responseText = res?.data?.response || res?.response || "Analysis complete.";
+        streamAIResponse(currentThreadId, responseText, [], [], false);
+      }
     } catch (err) {
       setIsTyping(false);
       const errMsg = err?.response?.data?.message || err?.message || "Could not connect to AI service.";
@@ -209,7 +256,7 @@ export const AIChat = () => {
     }
   };
 
-  // Handle initialPrompt from navigation state (AI Recommendations)
+  // Handle initialPrompt from navigation state (e.g. AI Recommendations)
   useEffect(() => {
     const promptText = location.state?.initialPrompt;
     const transitionKey = `${location.key || 'default'}-${promptText}`;
@@ -217,13 +264,11 @@ export const AIChat = () => {
     if (promptText && !processedPrompts.has(transitionKey)) {
       processedPrompts.add(transitionKey);
       
-      // Clean up older keys to prevent potential memory leak
       if (processedPrompts.size > 20) {
         const firstKey = processedPrompts.values().next().value;
         processedPrompts.delete(firstKey);
       }
 
-      // Clear location state using react-router's navigate replace to update router context
       navigate(location.pathname, { replace: true, state: {} });
       handleSendMessage(promptText);
     }
@@ -259,7 +304,13 @@ export const AIChat = () => {
       if (t.id === threadId) {
         return { 
           ...t, 
-          messages: [{ id: '1', sender: 'ai', text: `Conversation reset. Ready for new tactical directives.` }] 
+          messages: [
+            { 
+              id: `reset-${Date.now()}`, 
+              sender: 'ai', 
+              text: `Thread reset. Ready for next query.` 
+            }
+          ] 
         };
       }
       return t;
@@ -293,19 +344,24 @@ export const AIChat = () => {
               return (
                 <div
                   key={ch.id}
-                  onClick={() => {
-                    setActiveThreadId(ch.id);
-                    setIsHistoryDrawerOpen(false);
-                  }}
-                  className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs hover:bg-border/20 text-muted hover:text-text transition-all cursor-pointer truncate font-medium relative border ${
-                    isActive ? 'bg-primary/5 border-primary/25 text-primary hover:text-primary' : 'border-transparent'
+                  onClick={() => setActiveThreadId(ch.id)}
+                  className={`group w-full p-2.5 rounded-xl border flex items-center justify-between transition-all duration-200 cursor-pointer ${
+                    isActive 
+                      ? 'bg-primary/10 border-primary/40 text-text shadow-sm' 
+                      : 'border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text'
                   }`}
                 >
-                  <span className="truncate flex-1 pr-6"># {ch.title}</span>
+                  <div className="flex items-center gap-2 min-w-0 pr-1">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'}`} />
+                    <span className="text-xs font-semibold truncate leading-none">
+                      {ch.title}
+                    </span>
+                  </div>
+
                   <button
                     onClick={(e) => handleDeleteThread(ch.id, e)}
-                    className="opacity-0 group-hover:opacity-100 md:opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-500 cursor-pointer transition-all absolute right-2 bg-card/85 md:bg-transparent shadow-sm md:shadow-none"
-                    title="Delete thread"
+                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 text-muted transition-all cursor-pointer shrink-0"
+                    title="Delete session"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -314,19 +370,40 @@ export const AIChat = () => {
             })}
           </div>
         )}
+
+        {/* Knowledge Base Explorer Button in Sidebar */}
+        <div className="pt-2 border-t border-border/40">
+          <button
+            onClick={() => setIsKnowledgeDrawerOpen(true)}
+            className="w-full p-2.5 rounded-xl border border-primary/20 bg-primary/[0.04] hover:bg-primary/[0.08] hover:border-primary/40 transition-all text-left flex items-center justify-between group cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-md bg-primary/10 text-primary">
+                <Database size={13} />
+              </span>
+              <div>
+                <div className="text-xs font-bold text-text group-hover:text-primary transition-colors">
+                  Knowledge Hub
+                </div>
+                <div className="text-[9px] text-muted">
+                  {knowledgeDocCount} indexed football dossiers
+                </div>
+              </div>
+            </div>
+            <ChevronRight size={14} className="text-muted group-hover:text-primary transition-colors" />
+          </button>
+        </div>
       </div>
 
       {threads.length > 0 && (
-        <div className="pt-3 border-t border-border/40 shrink-0">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => {
-              handleClearHistory();
-              setIsHistoryDrawerOpen(false);
-            }}
-            className="w-full text-[10px] py-1.5 font-bold text-red-500 hover:text-white hover:bg-red-600 hover:border-red-600 transition-all rounded-lg"
+        <div className="pt-3 border-t border-border mt-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearHistory}
+            className="w-full text-[10px] h-7 font-bold py-0 flex items-center justify-center gap-1.5 text-muted hover:text-red-400 hover:border-red-500/30"
           >
+            <Trash2 size={10} />
             Clear local history
           </Button>
         </div>
@@ -353,6 +430,13 @@ export const AIChat = () => {
         {renderSidebarContent()}
       </Drawer>
 
+      {/* Knowledge Base Drawer */}
+      <KnowledgeBaseDrawer
+        isOpen={isKnowledgeDrawerOpen}
+        onClose={() => setIsKnowledgeDrawerOpen(false)}
+        onSelectDocumentPrompt={(prompt) => handleSendMessage(prompt)}
+      />
+
       {/* Center panel (Active Chat Room) */}
       <div className="flex-1 flex flex-col justify-between bg-background/30 min-w-0">
         
@@ -373,11 +457,30 @@ export const AIChat = () => {
                   {activeThread ? activeThread.title : "New Session"}
                 </h2>
               </div>
-              <p className="text-[9px] text-muted tracking-wider uppercase font-semibold">Football Copilot Intelligence Unit</p>
+              <p className="text-[9px] text-muted tracking-wider uppercase font-semibold">
+                Football Copilot Intelligence Unit
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Knowledge Base button in header for desktop */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsKnowledgeDrawerOpen(true)}
+              className="hidden sm:flex text-[10px] py-1 px-2.5 h-8 font-semibold items-center gap-1.5 text-text hover:text-primary hover:border-primary/40"
+              title="Inspect Knowledge Documents"
+            >
+              <Database size={11} className="text-primary" />
+              <span>Dossiers</span>
+              {knowledgeDocCount > 0 && (
+                <span className="bg-primary/20 text-primary text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                  {knowledgeDocCount}
+                </span>
+              )}
+            </Button>
+
             {activeThread && (
               <Button 
                 variant="outline" 
@@ -390,6 +493,7 @@ export const AIChat = () => {
                 <span className="hidden sm:inline">Reset</span>
               </Button>
             )}
+
             <Button 
               variant={activeThreadId === null ? "outline" : "primary"} 
               size="sm" 
@@ -407,10 +511,55 @@ export const AIChat = () => {
           </div>
         </div>
 
+        {/* Sub-header: RAG Mode Switcher & Category Filter Pills */}
+        <div className="px-4 py-2 border-b border-border/50 bg-card/40 flex items-center justify-between gap-3 overflow-x-auto shrink-0 no-scrollbar">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsRagMode(!isRagMode)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                isRagMode
+                  ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                  : 'bg-card border-border/70 text-muted hover:text-text'
+              }`}
+              title={isRagMode ? "RAG Grounding is Active" : "Click to activate Grounded RAG"}
+            >
+              <ShieldCheck size={12} className={isRagMode ? "text-primary animate-pulse" : "text-muted"} />
+              <span>{isRagMode ? "Grounded RAG Mode" : "Standard AI Mode"}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isRagMode ? "bg-primary" : "bg-muted"}`} />
+            </button>
+          </div>
+
+          {/* Category Filter Pills (Active when in RAG Mode) */}
+          {isRagMode && (
+            <div className="flex items-center gap-1.5 overflow-x-auto shrink-0">
+              <span className="text-[9px] uppercase font-bold text-muted tracking-wider hidden md:inline">
+                Focus:
+              </span>
+              {RAG_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-2 py-0.5 rounded-md text-[9.5px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-primary text-[#07120D] font-bold shadow-sm'
+                      : 'bg-card/60 text-muted hover:text-text border border-border/40'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Scrollable messages box */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
           {messages.length === 0 ? (
-            <EmptyChatState onSelectPrompt={handleSendMessage} loading={isTyping} />
+            <EmptyChatState 
+              onSelectPrompt={handleSendMessage} 
+              loading={isTyping} 
+              isRagMode={isRagMode}
+            />
           ) : (
             <div className="space-y-4">
               {messages.map((m) => {
@@ -422,7 +571,12 @@ export const AIChat = () => {
                   >
                     {isAI ? (
                       <div className="w-full">
-                        <AIResponseCard content={m.text} />
+                        <AIResponseCard 
+                          content={m.text} 
+                          sources={m.sources || []} 
+                          chunks={m.chunks || []} 
+                          isRag={m.isRag || false}
+                        />
                       </div>
                     ) : (
                       <div className="flex gap-2.5 items-start max-w-[85%] md:max-w-[70%]">
@@ -440,20 +594,21 @@ export const AIChat = () => {
             </div>
           )}
 
-          {/* Typing dots loader */}
+          {/* Typing loader */}
           {isTyping && (
             <div className="flex justify-start">
               <Card hover={false} className="border border-border/60 bg-border/10 p-3 flex gap-2 items-center rounded-xl shadow-sm">
                 <Cpu size={14} className="text-primary animate-spin" />
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest flex gap-1 select-none">
-                  thinking
+                  {isRagMode ? "retrieving & synthesizing knowledge" : "thinking"}
                   <span className="animate-bounce">.</span>
-                  <span className="animate-bounce [animation-delay:0.2s]">.</span>
-                  <span className="animate-bounce [animation-delay:0.4s]">.</span>
+                  <span className="animate-bounce delay-100">.</span>
+                  <span className="animate-bounce delay-200">.</span>
                 </span>
               </Card>
             </div>
           )}
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -466,21 +621,32 @@ export const AIChat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value.slice(0, 1000))}
               onKeyDown={handleKeyDown}
-              placeholder="Type tactical layout, scout profile, or prompt..."
+              placeholder={
+                isRagMode
+                  ? "Ask about 3-2-4-1 tactics, Gegenpressing, VAR protocols, or PSR financial rules..."
+                  : "Type tactical layout, scout profile, or prompt..."
+              }
               className="w-full py-1 px-2 bg-transparent text-xs text-text focus:outline-none placeholder-muted resize-none max-h-28 min-h-[24px] leading-relaxed font-medium"
               disabled={isTyping}
             />
             
             <div className="flex items-center justify-between px-2 pt-1 border-t border-border/20">
-              <span className="text-[9px] text-muted font-mono select-none">
-                {input.length} / 1000 characters
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-muted font-mono select-none">
+                  {input.length} / 1000
+                </span>
+                {isRagMode && (
+                  <span className="text-[9px] text-primary/80 font-semibold hidden sm:inline flex items-center gap-1">
+                    • Knowledge Grounded ({selectedCategory.toUpperCase()})
+                  </span>
+                )}
+              </div>
 
               <div className="flex items-center gap-1.5">
                 {isTyping ? (
                   <div className="flex items-center gap-1.5 text-[9px] text-primary uppercase font-bold tracking-widest px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-lg animate-pulse">
                     <Cpu size={10} className="animate-spin" />
-                    <span>thinking</span>
+                    <span>analyzing</span>
                   </div>
                 ) : (
                   <Button 
@@ -504,51 +670,85 @@ export const AIChat = () => {
   );
 };
 
-// Sub-component for Empty Chat State
-const EmptyChatState = ({ onSelectPrompt, loading }) => {
+// Sub-component for Empty Chat State showcasing Knowledge Base Dossiers
+const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
   const cards = [
     {
-      title: "Tactical Layouts",
-      description: "Analyze defensive shapes, counter-attacks, and pressing triggers.",
-      prompt: "Analyze Arsenal vs Manchester City tactically.",
+      title: "3-2-4-1 Box Midfield",
+      category: "Tactics",
+      description: "How inverted fullbacks overload half-spaces and establish rest defense.",
+      prompt: "How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?",
       icon: Cpu,
       color: "from-primary/10 to-primary/5 border-primary/20 hover:border-primary/45 text-primary"
     },
     {
-      title: "Squad Scouting",
-      description: "Generate potential recruitment profiles for specific positions.",
-      prompt: "Provide scouting options for a deep-lying playmaker.",
+      title: "Gegenpressing Mechanics",
+      category: "Tactics",
+      description: "Space compression, 5-8 second recovery window, and PPDA analysis.",
+      prompt: "Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.",
       icon: Sparkles,
-      color: "from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-500"
+      color: "from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45 text-emerald-400"
     },
     {
-      title: "Statistical Briefs",
-      description: "Fetch and process leading goalscoring and performance metrics.",
-      prompt: "Who is leading the golden boot metrics right now?",
+      title: "VAR Red Card Protocols",
+      category: "Rules",
+      description: "IFAB Clear and obvious error thresholds and Attacking Possession Phase.",
+      prompt: "What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?",
+      icon: ShieldCheck,
+      color: "from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-400"
+    },
+    {
+      title: "Premier League PSR Rules",
+      category: "Finance & Rules",
+      description: "£105m allowable losses, allowable deductions, and 5-year amortization caps.",
+      prompt: "Explain Premier League PSR £105m loss limits and transfer fee amortization rules.",
       icon: Award,
-      color: "from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-500"
+      color: "from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-400"
+    },
+    {
+      title: "2005 Istanbul Comeback",
+      category: "History",
+      description: "Benítez tactical shift neutralizing Kaká and Liverpool's 6-minute blitz.",
+      prompt: "Break down the tactical adjustments in the 2005 Istanbul Champions League final.",
+      icon: BookOpen,
+      color: "from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/45 text-purple-400"
+    },
+    {
+      title: "xG, xA & Field Tilt",
+      category: "Scouting",
+      description: "Evaluating territory and chance quality beyond raw possession numbers.",
+      prompt: "What is Field Tilt and how does it differentiate from total possession in scouting?",
+      icon: Database,
+      color: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 hover:border-cyan-500/45 text-cyan-400"
     }
   ];
 
   return (
-    <div className="max-w-2xl mx-auto my-auto py-8 px-4 flex flex-col items-center justify-center text-center space-y-8 select-none">
+    <div className="max-w-3xl mx-auto my-auto py-6 px-4 flex flex-col items-center justify-center text-center space-y-6 select-none">
       <div className="relative">
         <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-150 animate-pulse" />
-        <div className="relative p-4 bg-card border border-border/80 rounded-2xl shadow-xl flex items-center justify-center">
-          <Cpu size={36} className="text-primary animate-pulse" />
+        <div className="relative p-3.5 bg-card border border-border/80 rounded-2xl shadow-xl flex items-center justify-center">
+          <Database size={32} className="text-primary animate-pulse" />
         </div>
       </div>
 
-      <div className="space-y-2.5">
-        <h1 className="font-display font-black text-xl md:text-2xl text-text tracking-tight">
-          Football Copilot
-        </h1>
-        <p className="text-xs text-muted max-w-md leading-relaxed mx-auto">
-          Synchronize squad files, scout targets, draft tactical breakdowns, and query live metrics using the terminal.
+      <div className="space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <h1 className="font-display font-black text-xl md:text-2xl text-text tracking-tight">
+            Football Copilot Intelligence
+          </h1>
+          {isRagMode && (
+            <Badge variant="default" className="text-[10px] py-0.5 px-2 bg-primary/15 border-primary/30 text-primary font-bold">
+              RAG Engine
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted max-w-lg leading-relaxed mx-auto">
+          Query indexed tactical treatises, IFAB rulebooks, historical dossiers, and recruitment metrics with verified source citations.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full mt-2">
         {cards.map((c, i) => {
           const Icon = c.icon;
           return (
@@ -556,14 +756,23 @@ const EmptyChatState = ({ onSelectPrompt, loading }) => {
               key={i}
               onClick={() => !loading && onSelectPrompt(c.prompt)}
               disabled={loading}
-              className={`p-4 rounded-xl border bg-gradient-to-br text-left space-y-3 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${c.color} disabled:opacity-50 disabled:pointer-events-none`}
+              className={`p-3.5 rounded-xl border bg-gradient-to-br text-left space-y-2.5 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${c.color} disabled:opacity-50 disabled:pointer-events-none`}
             >
-              <div className="p-2 w-fit rounded-lg bg-card border border-border/50 shadow-sm group-hover:scale-105 transition-transform">
-                <Icon size={16} />
+              <div className="flex items-center justify-between">
+                <div className="p-1.5 w-fit rounded-lg bg-card border border-border/50 shadow-sm group-hover:scale-105 transition-transform">
+                  <Icon size={14} />
+                </div>
+                <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-border/40 text-muted">
+                  {c.category}
+                </span>
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-bold text-text group-hover:text-primary transition-colors">{c.title}</h3>
-                <p className="text-[10px] text-muted leading-relaxed leading-snug">{c.description}</p>
+                <h3 className="text-xs font-bold text-text group-hover:text-primary transition-colors leading-snug">
+                  {c.title}
+                </h3>
+                <p className="text-[10px] text-muted leading-relaxed line-clamp-2">
+                  {c.description}
+                </p>
               </div>
             </button>
           );
@@ -572,4 +781,5 @@ const EmptyChatState = ({ onSelectPrompt, loading }) => {
     </div>
   );
 };
+
 export default AIChat;
