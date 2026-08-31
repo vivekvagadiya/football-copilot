@@ -39,6 +39,9 @@ const endpoints = {
     ragDocuments: "/ai/rag/documents",
     ragDocumentById: (id) => `/ai/rag/documents/${id}`,
     ragIngest: "/ai/rag/ingest",
+    conversations: "/ai/conversations",
+    conversationById: (id) => `/ai/conversations/${id}`,
+    conversationMessages: (id) => `/ai/conversations/${id}/messages`,
   },
   notifications: {
     get: "/notifications",

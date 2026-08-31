@@ -5,7 +5,15 @@ import {
   RotateCcw, History, Plus, MessageSquareCode, BookOpen,
   Database, Award, ShieldCheck, Filter, ChevronRight
 } from 'lucide-react';
-import { sendAiChatApi, sendRagQueryApi, getKnowledgeDocumentsApi } from '../../api/ai.api';
+import { 
+  getAiConversationsApi, 
+  getAiConversationByIdApi, 
+  createAiConversationApi, 
+  sendMessageToAiConversationApi, 
+  deleteAiConversationApi, 
+  clearAllAiConversationsApi,
+  getKnowledgeDocumentsApi 
+} from '../../api/ai.api';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -32,28 +40,10 @@ export const AIChat = () => {
   const navigate = useNavigate();
   const userLetter = user?.username ? user.username[0].toUpperCase() : 'U';
 
-  const [threads, setThreads] = useState(() => {
-    const saved = localStorage.getItem('football_copilot_threads');
-    return saved ? JSON.parse(saved) : [
-      { 
-        id: 'ch1', 
-        title: '3-2-4-1 Box Midfield Dynamics', 
-        messages: [
-          { 
-            id: '1', 
-            sender: 'ai', 
-            text: "Tactical Intelligence synchronized. Ask me about **inverted fullbacks**, **half-space overloads**, **VAR clear & obvious error principles**, or **Premier League PSR thresholds**.",
-            isRag: true
-          }
-        ] 
-      }
-    ];
-  });
-
-  const [activeThreadId, setActiveThreadId] = useState(() => {
-    const saved = localStorage.getItem('football_copilot_active_thread_id');
-    return saved || 'ch1';
-  });
+  // MongoDB-backed conversation threads
+  const [threads, setThreads] = useState([]);
+  const [activeThreadId, setActiveThreadId] = useState(null);
+  const [loadingThreads, setLoadingThreads] = useState(true);
 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -69,19 +59,36 @@ export const AIChat = () => {
   const textareaRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Sync threads to localStorage
+  // Load conversations from MongoDB on mount
   useEffect(() => {
-    localStorage.setItem('football_copilot_threads', JSON.stringify(threads));
-  }, [threads]);
+    const fetchConversations = async () => {
+      setLoadingThreads(true);
+      try {
+        const res = await getAiConversationsApi();
+        const convs = res?.data || [];
+        setThreads(convs);
 
-  // Sync active thread ID to localStorage
-  useEffect(() => {
-    if (activeThreadId) {
-      localStorage.setItem('football_copilot_active_thread_id', activeThreadId);
-    } else {
-      localStorage.removeItem('football_copilot_active_thread_id');
-    }
-  }, [activeThreadId]);
+        if (convs.length > 0) {
+          const firstId = convs[0]._id;
+          setActiveThreadId(firstId);
+
+          // Fetch full message details for the first conversation
+          const detailRes = await getAiConversationByIdApi(firstId);
+          if (detailRes?.data) {
+            setThreads((prev) =>
+              prev.map((t) => (t._id === firstId ? detailRes.data : t))
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch AI conversations from MongoDB:', err);
+      } finally {
+        setLoadingThreads(false);
+      }
+    };
+
+    fetchConversations();
+  }, []);
 
   // Fetch count of knowledge documents
   useEffect(() => {
@@ -100,8 +107,8 @@ export const AIChat = () => {
     };
   }, []);
 
-  const activeThread = threads.find(t => t.id === activeThreadId);
-  const messages = activeThread ? activeThread.messages : [];
+  const activeThread = threads.find((t) => t._id === activeThreadId);
+  const messages = activeThread?.messages || [];
 
   // Scroll bottom on message change or typing state
   useEffect(() => {
@@ -116,48 +123,92 @@ export const AIChat = () => {
     }
   }, [input]);
 
+  // Select a thread and load full message history from MongoDB if needed
+  const handleSelectThread = async (threadId) => {
+    setActiveThreadId(threadId);
+    const existing = threads.find((t) => t._id === threadId);
+
+    // If messages aren't populated yet, fetch them
+    if (!existing || !Array.isArray(existing.messages) || existing.messages.length <= 1) {
+      try {
+        const detailRes = await getAiConversationByIdApi(threadId);
+        if (detailRes?.data) {
+          setThreads((prev) =>
+            prev.map((t) => (t._id === threadId ? detailRes.data : t))
+          );
+        }
+      } catch (err) {
+        console.error('Error fetching thread messages:', err);
+      }
+    }
+  };
+
+  // Create a brand new session in MongoDB
+  const handleNewChat = async () => {
+    try {
+      const res = await createAiConversationApi({
+        title: 'New Session',
+        category: selectedCategory,
+      });
+
+      const newConv = res?.data;
+      if (newConv) {
+        setThreads((prev) => [newConv, ...prev]);
+        setActiveThreadId(newConv._id);
+      }
+      setInput('');
+    } catch (err) {
+      console.error('Failed to create new conversation in MongoDB:', err);
+    }
+  };
+
+  // Streaming typewriter effect for AI response
   const streamAIResponse = (threadId, fullResponse, sources = [], chunks = [], isRag = false) => {
     let currentText = '';
     const words = fullResponse.split(' ');
     let wordIdx = 0;
 
     const tempId = `ai-${Date.now()}`;
-    setThreads(prev => prev.map(t => {
-      if (t.id === threadId) {
-        return {
-          ...t,
-          messages: [
-            ...t.messages, 
-            { 
-              id: tempId, 
-              sender: 'ai', 
-              text: '',
-              sources,
-              chunks,
-              isRag 
-            }
-          ]
-        };
-      }
-      return t;
-    }));
+    setThreads((prev) =>
+      prev.map((t) => {
+        if (t._id === threadId) {
+          return {
+            ...t,
+            messages: [
+              ...(t.messages || []),
+              {
+                _id: tempId,
+                sender: 'ai',
+                text: '',
+                sources,
+                chunks,
+                isRag,
+              },
+            ],
+          };
+        }
+        return t;
+      })
+    );
 
     const interval = setInterval(() => {
       if (wordIdx < words.length) {
         currentText += (wordIdx === 0 ? '' : ' ') + words[wordIdx];
-        setThreads(prev => prev.map(t => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              messages: t.messages.map(msg => 
-                msg.id === tempId 
-                  ? { ...msg, text: currentText, sources, chunks, isRag } 
-                  : msg
-              )
-            };
-          }
-          return t;
-        }));
+        setThreads((prev) =>
+          prev.map((t) => {
+            if (t._id === threadId) {
+              return {
+                ...t,
+                messages: (t.messages || []).map((msg) =>
+                  msg._id === tempId
+                    ? { ...msg, text: currentText, sources, chunks, isRag }
+                    : msg
+                ),
+              };
+            }
+            return t;
+          })
+        );
         wordIdx++;
       } else {
         clearInterval(interval);
@@ -177,82 +228,99 @@ export const AIChat = () => {
 
     let currentThreadId = activeThreadId;
 
+    // If no active thread, create one in MongoDB first
     if (!currentThreadId) {
-      currentThreadId = `thread-${Date.now()}`;
-      const newThreadTitle = currentInput.length > 28 ? currentInput.substring(0, 28) + '...' : currentInput;
-      
-      setThreads(prev => [
-        {
-          id: currentThreadId,
-          title: newThreadTitle,
-          messages: []
-        },
-        ...prev
-      ]);
-      setActiveThreadId(currentThreadId);
+      try {
+        const createRes = await createAiConversationApi({
+          title: currentInput.length > 28 ? currentInput.substring(0, 28) + '...' : currentInput,
+          category: selectedCategory !== 'all' ? selectedCategory : 'all',
+        });
+        const createdConv = createRes?.data;
+        if (createdConv) {
+          currentThreadId = createdConv._id;
+          setActiveThreadId(currentThreadId);
+          setThreads((prev) => [createdConv, ...prev]);
+        }
+      } catch (err) {
+        console.error('Error creating conversation:', err);
+        setIsTyping(false);
+        return;
+      }
     }
 
-    const userMessage = { id: `u-${Date.now()}`, sender: 'user', text: currentInput };
-    
-    // Optimistically add user message
-    setThreads(prev => prev.map(t => {
-      if (t.id === currentThreadId) {
-        return {
-          ...t,
-          messages: [...t.messages, userMessage]
-        };
-      }
-      return t;
-    }));
+    const optimisticUserMessage = {
+      _id: `u-${Date.now()}`,
+      sender: 'user',
+      text: currentInput,
+      createdAt: new Date().toISOString(),
+    };
 
-    try {
-      const activeTh = threads.find(t => t.id === currentThreadId);
-      const historyContext = activeTh 
-        ? [...activeTh.messages, userMessage]
-            .filter(m => m.id !== '1' && !m.id.startsWith('err-'))
-            .map(m => ({ sender: m.sender, text: m.text }))
-        : [userMessage].map(m => ({ sender: m.sender, text: m.text }));
-
-      if (isRagMode) {
-        // Query Grounded RAG Pipeline
-        const res = await sendRagQueryApi({
-          query: currentInput,
-          history: historyContext.slice(0, -1),
-          category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          topK: 4,
-        });
-
-        const answerText = res?.data?.answer || res?.answer || "Tactical intelligence analysis complete.";
-        const sources = res?.data?.sources || res?.sources || [];
-        const chunks = res?.data?.chunks || res?.chunks || [];
-
-        streamAIResponse(currentThreadId, answerText, sources, chunks, true);
-      } else {
-        // Standard General AI Chat
-        const res = await sendAiChatApi({
-          prompt: currentInput,
-          history: historyContext.slice(0, -1)
-        });
-
-        const responseText = res?.data?.response || res?.response || "Analysis complete.";
-        streamAIResponse(currentThreadId, responseText, [], [], false);
-      }
-    } catch (err) {
-      setIsTyping(false);
-      const errMsg = err?.response?.data?.message || err?.message || "Could not connect to AI service.";
-      setThreads(prev => prev.map(t => {
-        if (t.id === currentThreadId) {
+    // Optimistically show user message
+    setThreads((prev) =>
+      prev.map((t) => {
+        if (t._id === currentThreadId) {
           return {
             ...t,
-            messages: [...t.messages, { 
-              id: `err-${Date.now()}`, 
-              sender: 'ai', 
-              text: `**System Error:** ${errMsg}` 
-            }]
+            messages: [...(t.messages || []), optimisticUserMessage],
           };
         }
         return t;
-      }));
+      })
+    );
+
+    try {
+      // Send to MongoDB backed endpoint (executes RAG/AI and persists turns in DB)
+      const res = await sendMessageToAiConversationApi(currentThreadId, {
+        prompt: currentInput,
+        isRag: isRagMode,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      });
+
+      const { aiMessage, title } = res?.data || {};
+
+      // Update thread title in state if auto-generated on first turn
+      if (title) {
+        setThreads((prev) =>
+          prev.map((t) => (t._id === currentThreadId ? { ...t, title } : t))
+        );
+      }
+
+      if (aiMessage) {
+        streamAIResponse(
+          currentThreadId,
+          aiMessage.text,
+          aiMessage.sources || [],
+          aiMessage.chunks || [],
+          aiMessage.isRag || isRagMode
+        );
+      } else {
+        setIsTyping(false);
+      }
+    } catch (err) {
+      setIsTyping(false);
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Could not connect to AI service.';
+
+      setThreads((prev) =>
+        prev.map((t) => {
+          if (t._id === currentThreadId) {
+            return {
+              ...t,
+              messages: [
+                ...(t.messages || []),
+                {
+                  _id: `err-${Date.now()}`,
+                  sender: 'ai',
+                  text: `**System Error:** ${errMsg}`,
+                },
+              ],
+            };
+          }
+          return t;
+        })
+      );
     }
   };
 
@@ -263,7 +331,7 @@ export const AIChat = () => {
 
     if (promptText && !processedPrompts.has(transitionKey)) {
       processedPrompts.add(transitionKey);
-      
+
       if (processedPrompts.size > 20) {
         const firstKey = processedPrompts.values().next().value;
         processedPrompts.delete(firstKey);
@@ -281,40 +349,32 @@ export const AIChat = () => {
     }
   };
 
-  const handleDeleteThread = (threadId, e) => {
+  const handleDeleteThread = async (threadId, e) => {
     e.stopPropagation();
-    setThreads(prev => {
-      const updated = prev.filter(t => t.id !== threadId);
-      if (activeThreadId === threadId) {
-        setActiveThreadId(updated.length > 0 ? updated[0].id : null);
-      }
-      return updated;
-    });
+    try {
+      await deleteAiConversationApi(threadId);
+      setThreads((prev) => {
+        const updated = prev.filter((t) => t._id !== threadId);
+        if (activeThreadId === threadId) {
+          const nextId = updated.length > 0 ? updated[0]._id : null;
+          setActiveThreadId(nextId);
+          if (nextId) handleSelectThread(nextId);
+        }
+        return updated;
+      });
+    } catch (err) {
+      console.error('Failed to delete conversation from MongoDB:', err);
+    }
   };
 
-  const handleClearHistory = () => {
-    setThreads([]);
-    setActiveThreadId(null);
-    localStorage.removeItem('football_copilot_threads');
-    localStorage.removeItem('football_copilot_active_thread_id');
-  };
-
-  const handleResetThread = (threadId) => {
-    setThreads(prev => prev.map(t => {
-      if (t.id === threadId) {
-        return { 
-          ...t, 
-          messages: [
-            { 
-              id: `reset-${Date.now()}`, 
-              sender: 'ai', 
-              text: `Thread reset. Ready for next query.` 
-            }
-          ] 
-        };
-      }
-      return t;
-    }));
+  const handleClearHistory = async () => {
+    try {
+      await clearAllAiConversationsApi();
+      setThreads([]);
+      setActiveThreadId(null);
+    } catch (err) {
+      console.error('Failed to clear conversations from MongoDB:', err);
+    }
   };
 
   const renderSidebarContent = () => (
@@ -331,37 +391,48 @@ export const AIChat = () => {
           )}
         </div>
 
-        {threads.length === 0 ? (
+        {loadingThreads ? (
+          <div className="text-center py-8 text-muted space-y-2">
+            <Cpu size={18} className="mx-auto text-primary animate-spin" />
+            <p className="text-[10px]">Loading MongoDB archives...</p>
+          </div>
+        ) : threads.length === 0 ? (
           <div className="text-center py-10 px-4 border border-dashed border-border/60 rounded-2xl bg-card/20">
             <MessageSquareCode size={24} className="mx-auto text-muted/50 mb-2.5" />
             <p className="text-[11px] font-semibold text-muted">No tactical archives.</p>
-            <p className="text-[9px] text-muted/70 mt-1">Directives and profiles will persist here.</p>
+            <p className="text-[9px] text-muted/70 mt-1">
+              Conversations will persist in your cloud database.
+            </p>
           </div>
         ) : (
           <div className="space-y-1.5">
-            {threads.map(ch => {
-              const isActive = ch.id === activeThreadId;
+            {threads.map((ch) => {
+              const isActive = ch._id === activeThreadId;
               return (
                 <div
-                  key={ch.id}
-                  onClick={() => setActiveThreadId(ch.id)}
+                  key={ch._id}
+                  onClick={() => handleSelectThread(ch._id)}
                   className={`group w-full p-2.5 rounded-xl border flex items-center justify-between transition-all duration-200 cursor-pointer ${
-                    isActive 
-                      ? 'bg-primary/10 border-primary/40 text-text shadow-sm' 
+                    isActive
+                      ? 'bg-primary/10 border-primary/40 text-text shadow-sm'
                       : 'border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-1">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'
+                      }`}
+                    />
                     <span className="text-xs font-semibold truncate leading-none">
-                      {ch.title}
+                      {ch.title || 'Untitled Session'}
                     </span>
                   </div>
 
                   <button
-                    onClick={(e) => handleDeleteThread(ch.id, e)}
+                    onClick={(e) => handleDeleteThread(ch._id, e)}
                     className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 text-muted transition-all cursor-pointer shrink-0"
-                    title="Delete session"
+                    title="Delete session from MongoDB"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -390,7 +461,10 @@ export const AIChat = () => {
                 </div>
               </div>
             </div>
-            <ChevronRight size={14} className="text-muted group-hover:text-primary transition-colors" />
+            <ChevronRight
+              size={14}
+              className="text-muted group-hover:text-primary transition-colors"
+            />
           </button>
         </div>
       </div>
@@ -404,7 +478,7 @@ export const AIChat = () => {
             className="w-full text-[10px] h-7 font-bold py-0 flex items-center justify-center gap-1.5 text-muted hover:text-red-400 hover:border-red-500/30"
           >
             <Trash2 size={10} />
-            Clear local history
+            Clear cloud history
           </Button>
         </div>
       )}
@@ -413,7 +487,6 @@ export const AIChat = () => {
 
   return (
     <div className="h-[calc(100vh-7rem)] md:h-[calc(100vh-8.5rem)] border border-border rounded-2xl overflow-hidden flex bg-card/45 shadow-sm">
-      
       {/* Left panel (Chat History Desktop) */}
       <div className="w-64 border-r border-border bg-card/65 flex flex-col justify-between shrink-0 hidden md:flex p-4">
         {renderSidebarContent()}
@@ -439,11 +512,10 @@ export const AIChat = () => {
 
       {/* Center panel (Active Chat Room) */}
       <div className="flex-1 flex flex-col justify-between bg-background/30 min-w-0">
-        
         {/* Chat Area Header */}
         <div className="h-14 border-b border-border bg-card/65 px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <button 
+            <button
               onClick={() => setIsHistoryDrawerOpen(true)}
               className="md:hidden p-2 rounded-lg border border-border/60 text-muted hover:text-text cursor-pointer transition-colors bg-background/50"
               title="View Archives"
@@ -454,7 +526,7 @@ export const AIChat = () => {
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
                 <h2 className="text-xs font-bold text-text truncate">
-                  {activeThread ? activeThread.title : "New Session"}
+                  {activeThread ? activeThread.title : 'New Session'}
                 </h2>
               </div>
               <p className="text-[9px] text-muted tracking-wider uppercase font-semibold">
@@ -481,31 +553,18 @@ export const AIChat = () => {
               )}
             </Button>
 
-            {activeThread && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleResetThread(activeThreadId)}
-                className="text-[10px] py-1 px-2.5 h-8 font-semibold flex items-center gap-1"
-                title="Reset current conversation"
-              >
-                <RotateCcw size={11} />
-                <span className="hidden sm:inline">Reset</span>
-              </Button>
-            )}
-
-            <Button 
-              variant={activeThreadId === null ? "outline" : "primary"} 
-              size="sm" 
-              onClick={() => {
-                setActiveThreadId(null);
-                setInput('');
-              }}
+            <Button
+              variant={activeThreadId === null ? 'outline' : 'primary'}
+              size="sm"
+              onClick={handleNewChat}
               className="text-[10px] py-1 px-2.5 h-8 font-semibold flex items-center gap-1"
-              title="Start a new chat session"
+              title="Start a new cloud chat session"
               disabled={isTyping}
             >
-              <Plus size={11} className={activeThreadId === null ? "text-text" : "text-[#07120D]"} />
+              <Plus
+                size={11}
+                className={activeThreadId === null ? 'text-text' : 'text-[#07120D]'}
+              />
               <span>New Chat</span>
             </Button>
           </div>
@@ -521,11 +580,14 @@ export const AIChat = () => {
                   ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
                   : 'bg-card border-border/70 text-muted hover:text-text'
               }`}
-              title={isRagMode ? "RAG Grounding is Active" : "Click to activate Grounded RAG"}
+              title={isRagMode ? 'RAG Grounding is Active' : 'Click to activate Grounded RAG'}
             >
-              <ShieldCheck size={12} className={isRagMode ? "text-primary animate-pulse" : "text-muted"} />
-              <span>{isRagMode ? "Grounded RAG Mode" : "Standard AI Mode"}</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${isRagMode ? "bg-primary" : "bg-muted"}`} />
+              <ShieldCheck
+                size={12}
+                className={isRagMode ? 'text-primary animate-pulse' : 'text-muted'}
+              />
+              <span>{isRagMode ? 'Grounded RAG Mode' : 'Standard AI Mode'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isRagMode ? 'bg-primary' : 'bg-muted'}`} />
             </button>
           </div>
 
@@ -555,9 +617,9 @@ export const AIChat = () => {
         {/* Scrollable messages box */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
           {messages.length === 0 ? (
-            <EmptyChatState 
-              onSelectPrompt={handleSendMessage} 
-              loading={isTyping} 
+            <EmptyChatState
+              onSelectPrompt={handleSendMessage}
+              loading={isTyping}
               isRagMode={isRagMode}
             />
           ) : (
@@ -565,16 +627,16 @@ export const AIChat = () => {
               {messages.map((m) => {
                 const isAI = m.sender === 'ai';
                 return (
-                  <div 
-                    key={m.id}
+                  <div
+                    key={m._id || m.id || Math.random()}
                     className={`flex ${isAI ? 'justify-start' : 'justify-end'} w-full`}
                   >
                     {isAI ? (
                       <div className="w-full">
-                        <AIResponseCard 
-                          content={m.text} 
-                          sources={m.sources || []} 
-                          chunks={m.chunks || []} 
+                        <AIResponseCard
+                          content={m.text}
+                          sources={m.sources || []}
+                          chunks={m.chunks || []}
                           isRag={m.isRag || false}
                         />
                       </div>
@@ -597,10 +659,13 @@ export const AIChat = () => {
           {/* Typing loader */}
           {isTyping && (
             <div className="flex justify-start">
-              <Card hover={false} className="border border-border/60 bg-border/10 p-3 flex gap-2 items-center rounded-xl shadow-sm">
+              <Card
+                hover={false}
+                className="border border-border/60 bg-border/10 p-3 flex gap-2 items-center rounded-xl shadow-sm"
+              >
                 <Cpu size={14} className="text-primary animate-spin" />
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest flex gap-1 select-none">
-                  {isRagMode ? "retrieving & synthesizing knowledge" : "thinking"}
+                  {isRagMode ? 'retrieving & synthesizing knowledge' : 'thinking'}
                   <span className="animate-bounce">.</span>
                   <span className="animate-bounce delay-100">.</span>
                   <span className="animate-bounce delay-200">.</span>
@@ -623,13 +688,13 @@ export const AIChat = () => {
               onKeyDown={handleKeyDown}
               placeholder={
                 isRagMode
-                  ? "Ask about 3-2-4-1 tactics, Gegenpressing, VAR protocols, or PSR financial rules..."
-                  : "Type tactical layout, scout profile, or prompt..."
+                  ? 'Ask about 3-2-4-1 tactics, Gegenpressing, VAR protocols, or PSR financial rules...'
+                  : 'Type tactical layout, scout profile, or prompt...'
               }
               className="w-full py-1 px-2 bg-transparent text-xs text-text focus:outline-none placeholder-muted resize-none max-h-28 min-h-[24px] leading-relaxed font-medium"
               disabled={isTyping}
             />
-            
+
             <div className="flex items-center justify-between px-2 pt-1 border-t border-border/20">
               <div className="flex items-center gap-2">
                 <span className="text-[9px] text-muted font-mono select-none">
@@ -649,9 +714,9 @@ export const AIChat = () => {
                     <span>analyzing</span>
                   </div>
                 ) : (
-                  <Button 
-                    onClick={() => handleSendMessage(input)} 
-                    size="sm" 
+                  <Button
+                    onClick={() => handleSendMessage(input)}
+                    size="sm"
                     className="rounded-lg h-7 px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 transition-all"
                     disabled={!input.trim() || isTyping}
                   >
@@ -663,9 +728,7 @@ export const AIChat = () => {
             </div>
           </div>
         </div>
-
       </div>
-
     </div>
   );
 };
@@ -674,53 +737,53 @@ export const AIChat = () => {
 const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
   const cards = [
     {
-      title: "3-2-4-1 Box Midfield",
-      category: "Tactics",
-      description: "How inverted fullbacks overload half-spaces and establish rest defense.",
-      prompt: "How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?",
+      title: '3-2-4-1 Box Midfield',
+      category: 'Tactics',
+      description: 'How inverted fullbacks overload half-spaces and establish rest defense.',
+      prompt: 'How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?',
       icon: Cpu,
-      color: "from-primary/10 to-primary/5 border-primary/20 hover:border-primary/45 text-primary"
+      color: 'from-primary/10 to-primary/5 border-primary/20 hover:border-primary/45 text-primary',
     },
     {
-      title: "Gegenpressing Mechanics",
-      category: "Tactics",
-      description: "Space compression, 5-8 second recovery window, and PPDA analysis.",
-      prompt: "Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.",
+      title: 'Gegenpressing Mechanics',
+      category: 'Tactics',
+      description: 'Space compression, 5-8 second recovery window, and PPDA analysis.',
+      prompt: 'Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.',
       icon: Sparkles,
-      color: "from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45 text-emerald-400"
+      color: 'from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45 text-emerald-400',
     },
     {
-      title: "VAR Red Card Protocols",
-      category: "Rules",
-      description: "IFAB Clear and obvious error thresholds and Attacking Possession Phase.",
-      prompt: "What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?",
+      title: 'VAR Red Card Protocols',
+      category: 'Rules',
+      description: 'IFAB Clear and obvious error thresholds and Attacking Possession Phase.',
+      prompt: 'What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?',
       icon: ShieldCheck,
-      color: "from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-400"
+      color: 'from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-400',
     },
     {
-      title: "Premier League PSR Rules",
-      category: "Finance & Rules",
-      description: "£105m allowable losses, allowable deductions, and 5-year amortization caps.",
-      prompt: "Explain Premier League PSR £105m loss limits and transfer fee amortization rules.",
+      title: 'Premier League PSR Rules',
+      category: 'Finance & Rules',
+      description: '£105m allowable losses, allowable deductions, and 5-year amortization caps.',
+      prompt: 'Explain Premier League PSR £105m loss limits and transfer fee amortization rules.',
       icon: Award,
-      color: "from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-400"
+      color: 'from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-400',
     },
     {
-      title: "2005 Istanbul Comeback",
-      category: "History",
-      description: "Benítez tactical shift neutralizing Kaká and Liverpool's 6-minute blitz.",
-      prompt: "Break down the tactical adjustments in the 2005 Istanbul Champions League final.",
+      title: '2005 Istanbul Comeback',
+      category: 'History',
+      description: 'Benítez tactical shift neutralizing Kaká and Liverpool\'s 6-minute blitz.',
+      prompt: 'Break down the tactical adjustments in the 2005 Istanbul Champions League final.',
       icon: BookOpen,
-      color: "from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/45 text-purple-400"
+      color: 'from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/45 text-purple-400',
     },
     {
-      title: "xG, xA & Field Tilt",
-      category: "Scouting",
-      description: "Evaluating territory and chance quality beyond raw possession numbers.",
-      prompt: "What is Field Tilt and how does it differentiate from total possession in scouting?",
+      title: 'xG, xA & Field Tilt',
+      category: 'Scouting',
+      description: 'Evaluating territory and chance quality beyond raw possession numbers.',
+      prompt: 'What is Field Tilt and how does it differentiate from total possession in scouting?',
       icon: Database,
-      color: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 hover:border-cyan-500/45 text-cyan-400"
-    }
+      color: 'from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 hover:border-cyan-500/45 text-cyan-400',
+    },
   ];
 
   return (
@@ -738,13 +801,16 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
             Football Copilot Intelligence
           </h1>
           {isRagMode && (
-            <Badge variant="default" className="text-[10px] py-0.5 px-2 bg-primary/15 border-primary/30 text-primary font-bold">
+            <Badge
+              variant="default"
+              className="text-[10px] py-0.5 px-2 bg-primary/15 border-primary/30 text-primary font-bold"
+            >
               RAG Engine
             </Badge>
           )}
         </div>
         <p className="text-xs text-muted max-w-lg leading-relaxed mx-auto">
-          Query indexed tactical treatises, IFAB rulebooks, historical dossiers, and recruitment metrics with verified source citations.
+          Query indexed tactical treatises, IFAB rulebooks, historical dossiers, and recruitment metrics with cloud-synced MongoDB archives.
         </p>
       </div>
 

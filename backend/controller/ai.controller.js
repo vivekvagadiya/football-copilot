@@ -3,6 +3,7 @@ const apiResponse = require("../utils/apiResponse");
 const aiService = require("../services/ai.service");
 const ragService = require("../services/rag.service");
 const recommendationService = require("../services/recommendation.service");
+const AiConversation = require("../models/aiConversation.model");
 
 const chat = asyncHandler(async (req, res) => {
   const { prompt, history } = req.body;
@@ -96,6 +97,205 @@ const deleteDocument = asyncHandler(async (req, res) => {
   return apiResponse.success(res, "Knowledge document deleted successfully", { id });
 });
 
+// ==================== Sprint 18: AI Conversation & Chat Persistence ====================
+
+const listConversations = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const conversations = await AiConversation.aggregate([
+    { $match: { userId } },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        category: 1,
+        isPinned: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        messageCount: { $size: "$messages" },
+        lastMessage: { $arrayElemAt: ["$messages", -1] },
+      },
+    },
+    { $sort: { isPinned: -1, updatedAt: -1 } },
+  ]);
+
+  return apiResponse.success(
+    res,
+    "AI conversations retrieved successfully",
+    conversations
+  );
+});
+
+const getConversationById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  const conversation = await AiConversation.findOne({ _id: id, userId });
+
+  if (!conversation) {
+    return apiResponse.error(res, "Conversation not found", 404);
+  }
+
+  return apiResponse.success(
+    res,
+    "Conversation retrieved successfully",
+    conversation
+  );
+});
+
+const createConversation = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { title, category = "all", initialPrompt } = req.body;
+
+  const conversation = new AiConversation({
+    userId,
+    title: title || "New Session",
+    category,
+    messages: [
+      {
+        sender: "ai",
+        text: "Tactical Intelligence synchronized. Ask me about **inverted fullbacks**, **half-space overloads**, **VAR clear & obvious error principles**, or **Premier League PSR thresholds**.",
+        isRag: true,
+      },
+    ],
+  });
+
+  const saved = await conversation.save();
+
+  return apiResponse.success(
+    res,
+    "AI conversation created successfully",
+    saved,
+    201
+  );
+});
+
+const sendMessageToConversation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+  const { prompt, isRag = true, category } = req.body;
+
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    return apiResponse.error(res, "Prompt string is required", 400);
+  }
+
+  const conversation = await AiConversation.findOne({ _id: id, userId });
+  if (!conversation) {
+    return apiResponse.error(res, "Conversation not found", 404);
+  }
+
+  // Auto-generate title if currently default and first user message
+  const hasUserMessage = conversation.messages.some((m) => m.sender === "user");
+  if (!hasUserMessage && (conversation.title === "New Session" || !conversation.title)) {
+    const trimmedTitle = prompt.trim().length > 30 
+      ? prompt.trim().substring(0, 30) + "..." 
+      : prompt.trim();
+    conversation.title = trimmedTitle;
+  }
+
+  // Build history context for AI
+  const historyContext = conversation.messages
+    .filter((m) => !m.text.startsWith("**System Error:"))
+    .map((m) => ({ sender: m.sender, text: m.text }));
+
+  // Append user message
+  const userMsgObj = {
+    sender: "user",
+    text: prompt.trim(),
+  };
+  conversation.messages.push(userMsgObj);
+
+  let aiAnswer = "";
+  let sources = [];
+  let chunks = [];
+
+  if (isRag) {
+    const ragResult = await ragService.generateRAGResponse(
+      prompt,
+      historyContext,
+      { category: category || conversation.category }
+    );
+    aiAnswer = ragResult.answer;
+    sources = ragResult.sources || [];
+    chunks = ragResult.chunks || [];
+  } else {
+    aiAnswer = await aiService.generateChatResponse(prompt, historyContext);
+  }
+
+  // Append AI message
+  const aiMsgObj = {
+    sender: "ai",
+    text: aiAnswer,
+    isRag: !!isRag,
+    sources,
+    chunks,
+  };
+  conversation.messages.push(aiMsgObj);
+
+  await conversation.save();
+
+  const savedUserMsg = conversation.messages[conversation.messages.length - 2];
+  const savedAiMsg = conversation.messages[conversation.messages.length - 1];
+
+  return apiResponse.success(res, "Message sent successfully", {
+    conversationId: conversation._id,
+    title: conversation.title,
+    userMessage: savedUserMsg,
+    aiMessage: savedAiMsg,
+  });
+});
+
+const updateConversation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+  const { title, isPinned, category } = req.body;
+
+  const updateFields = {};
+  if (title !== undefined) updateFields.title = title.trim();
+  if (isPinned !== undefined) updateFields.isPinned = Boolean(isPinned);
+  if (category !== undefined) updateFields.category = category;
+
+  const updated = await AiConversation.findOneAndUpdate(
+    { _id: id, userId },
+    { $set: updateFields },
+    { new: true }
+  );
+
+  if (!updated) {
+    return apiResponse.error(res, "Conversation not found", 404);
+  }
+
+  return apiResponse.success(
+    res,
+    "Conversation updated successfully",
+    updated
+  );
+});
+
+const deleteConversation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  const deleted = await AiConversation.findOneAndDelete({ _id: id, userId });
+  if (!deleted) {
+    return apiResponse.error(res, "Conversation not found", 404);
+  }
+
+  return apiResponse.success(res, "Conversation deleted successfully", { id });
+});
+
+const clearAllConversations = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const result = await AiConversation.deleteMany({ userId });
+
+  return apiResponse.success(
+    res,
+    "All conversations cleared successfully",
+    { deletedCount: result.deletedCount }
+  );
+});
+
 module.exports = {
   chat,
   getRecommendations,
@@ -104,4 +304,12 @@ module.exports = {
   listDocuments,
   getDocumentById,
   deleteDocument,
+  listConversations,
+  getConversationById,
+  createConversation,
+  sendMessageToConversation,
+  updateConversation,
+  deleteConversation,
+  clearAllConversations,
 };
+
