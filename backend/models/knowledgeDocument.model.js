@@ -22,6 +22,10 @@ const chunkSchema = new mongoose.Schema(
         lowercase: true,
       },
     ],
+    embedding: {
+      type: [Number],
+      default: [],
+    },
   },
   { _id: true }
 );

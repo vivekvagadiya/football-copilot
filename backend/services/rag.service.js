@@ -1,6 +1,12 @@
 const { GoogleGenAI } = require("@google/genai");
 const KnowledgeDocument = require("../models/knowledgeDocument.model");
+const KnowledgeChunk = require("../models/knowledgeChunk.model");
 const { splitTextIntoChunks, extractKeywords } = require("../utils/chunker.util");
+const {
+  generateEmbedding,
+  generateBatchEmbeddings,
+  cosineSimilarity,
+} = require("./embedding.service");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -63,6 +69,19 @@ async function ingestDocument(docData, options = {}) {
       ])
     ).filter(Boolean);
 
+    // Generate embeddings for chunks in batch
+    let embeddings = [];
+    try {
+      embeddings = await generateBatchEmbeddings(chunks.map((c) => c.content));
+    } catch (embedErr) {
+      logger.warn(`[RAG] Failed to generate embeddings during ingestion: ${embedErr.message}`);
+    }
+
+    const chunksWithEmbeddings = chunks.map((chunk, idx) => ({
+      ...chunk,
+      embedding: embeddings[idx] || [],
+    }));
+
     const document = new KnowledgeDocument({
       title,
       category,
@@ -71,15 +90,37 @@ async function ingestDocument(docData, options = {}) {
       tags: combinedTags,
       metadata,
       rawContent,
-      chunks,
-      chunkCount: chunks.length,
+      chunks: chunksWithEmbeddings,
+      chunkCount: chunksWithEmbeddings.length,
       createdBy,
     });
 
     const savedDoc = await document.save();
 
+    // Also index into flat KnowledgeChunk collection for fast MongoDB Atlas Vector Search
+    try {
+      const flatChunks = chunksWithEmbeddings.map((chunk) => ({
+        documentId: savedDoc._id,
+        chunkIndex: chunk.chunkIndex,
+        title: savedDoc.title,
+        category: savedDoc.category,
+        source: savedDoc.source,
+        author: savedDoc.author,
+        content: chunk.content,
+        tokenEstimate: chunk.tokenEstimate,
+        keywords: chunk.keywords,
+        embedding: chunk.embedding,
+      }));
+
+      if (flatChunks.length > 0) {
+        await KnowledgeChunk.insertMany(flatChunks);
+      }
+    } catch (chunkErr) {
+      logger.error(`[RAG] Error inserting into KnowledgeChunk collection: ${chunkErr.message}`);
+    }
+
     logger.info(
-      `[RAG] Successfully ingested document '${title}' with ${chunks.length} chunks (ID: ${savedDoc._id})`
+      `[RAG] Successfully ingested document '${title}' with ${chunks.length} chunks and embeddings (ID: ${savedDoc._id})`
     );
 
     return {
@@ -97,7 +138,71 @@ async function ingestDocument(docData, options = {}) {
 }
 
 /**
- * Retrieves the most relevant knowledge chunks matching a query.
+ * Fallback keyword-based retrieval when vector search is unavailable or unindexed.
+ */
+async function fallbackKeywordRetrieval(query, options = {}) {
+  const topK = options.topK || 4;
+  const categoryFilter = options.category;
+
+  const queryTerms = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  const filter = {};
+  if (categoryFilter && categoryFilter !== "all") {
+    filter.category = categoryFilter;
+  }
+
+  const documents = await KnowledgeDocument.find(filter).lean();
+  if (!documents || documents.length === 0) {
+    return [];
+  }
+
+  const scoredChunks = [];
+
+  for (const doc of documents) {
+    const docTitleLower = doc.title.toLowerCase();
+    const docTags = (doc.tags || []).map((t) => t.toLowerCase());
+
+    for (const chunk of doc.chunks || []) {
+      let score = 0;
+      const chunkContentLower = chunk.content.toLowerCase();
+      const chunkKeywords = (chunk.keywords || []).map((k) => k.toLowerCase());
+
+      for (const term of queryTerms) {
+        if (chunkContentLower.includes(term)) score += 3;
+        if (chunkKeywords.includes(term)) score += 4;
+        if (docTitleLower.includes(term)) score += 5;
+        if (docTags.includes(term)) score += 2;
+      }
+
+      if (score > 0) {
+        scoredChunks.push({
+          score,
+          documentId: doc._id,
+          title: doc.title,
+          category: doc.category,
+          source: doc.source,
+          author: doc.author,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.content,
+          tokenEstimate: chunk.tokenEstimate,
+        });
+      }
+    }
+  }
+
+  scoredChunks.sort((a, b) => b.score - a.score);
+  return scoredChunks.slice(0, topK);
+}
+
+/**
+ * Retrieves the most relevant knowledge chunks matching a query using:
+ * 1. MongoDB Atlas $vectorSearch (HNSW indexed semantic search)
+ * 2. In-memory cosine similarity fallback (if $vectorSearch not yet indexed)
+ * 3. Keyword-based matching fallback
  *
  * @param {string} query - The search query
  * @param {Object} options - Retrieval options
@@ -115,80 +220,110 @@ async function retrieveContext(query, options = {}) {
   }
 
   try {
-    const queryTerms = query
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
-      .split(/\s+/)
-      .filter((w) => w.length > 2);
-
-    const filter = {};
-    if (categoryFilter && categoryFilter !== "all") {
-      filter.category = categoryFilter;
+    // 1. Generate embedding for search query
+    let queryEmbedding = [];
+    try {
+      queryEmbedding = await generateEmbedding(query);
+    } catch (embedErr) {
+      logger.warn(`[RAG] Could not generate query embedding: ${embedErr.message}`);
     }
 
-    // Retrieve documents matching filter
-    const documents = await KnowledgeDocument.find(filter).lean();
+    // 2. Primary: MongoDB Atlas Vector Search
+    if (queryEmbedding && queryEmbedding.length > 0) {
+      try {
+        const vectorSearchStage = {
+          index: "vector_index",
+          path: "embedding",
+          queryVector: queryEmbedding,
+          numCandidates: Math.max(50, topK * 10),
+          limit: topK,
+        };
 
-    if (!documents || documents.length === 0) {
-      return [];
-    }
-
-    const scoredChunks = [];
-
-    for (const doc of documents) {
-      const docTitleLower = doc.title.toLowerCase();
-      const docTags = (doc.tags || []).map((t) => t.toLowerCase());
-
-      for (const chunk of doc.chunks || []) {
-        let score = 0;
-        const chunkContentLower = chunk.content.toLowerCase();
-        const chunkKeywords = (chunk.keywords || []).map((k) => k.toLowerCase());
-
-        for (const term of queryTerms) {
-          // Chunk content match
-          if (chunkContentLower.includes(term)) {
-            score += 3;
-          }
-          // Chunk keywords match
-          if (chunkKeywords.includes(term)) {
-            score += 4;
-          }
-          // Document title match
-          if (docTitleLower.includes(term)) {
-            score += 5;
-          }
-          // Document tags match
-          if (docTags.includes(term)) {
-            score += 2;
-          }
+        if (categoryFilter && categoryFilter !== "all") {
+          vectorSearchStage.filter = { category: categoryFilter };
         }
 
-        // Only consider chunks with a non-zero relevance score
-        if (score > 0) {
-          scoredChunks.push({
-            score,
-            documentId: doc._id,
-            title: doc.title,
-            category: doc.category,
-            source: doc.source,
-            author: doc.author,
-            chunkIndex: chunk.chunkIndex,
-            content: chunk.content,
-            tokenEstimate: chunk.tokenEstimate,
-          });
+        const pipeline = [
+          { $vectorSearch: vectorSearchStage },
+          {
+            $project: {
+              _id: 1,
+              documentId: 1,
+              chunkIndex: 1,
+              title: 1,
+              category: 1,
+              source: 1,
+              author: 1,
+              content: 1,
+              tokenEstimate: 1,
+              score: { $meta: "vectorSearchScore" },
+            },
+          },
+        ];
+
+        const atlasResults = await KnowledgeChunk.aggregate(pipeline);
+        if (atlasResults && atlasResults.length > 0) {
+          logger.info(
+            `[RAG] Atlas $vectorSearch retrieved ${atlasResults.length} chunks (top score: ${atlasResults[0]?.score?.toFixed(3) || 0})`
+          );
+          return atlasResults;
         }
+      } catch (atlasErr) {
+        logger.warn(
+          `[RAG] Atlas $vectorSearch unavailable (${atlasErr.message}). Falling back to in-memory/keyword search.`
+        );
+      }
+
+      // 3. Fallback: In-memory cosine similarity over KnowledgeChunk records
+      try {
+        const filter = {};
+        if (categoryFilter && categoryFilter !== "all") {
+          filter.category = categoryFilter;
+        }
+
+        const chunks = await KnowledgeChunk.find(filter)
+          .select("documentId chunkIndex title category source author content tokenEstimate embedding")
+          .limit(200)
+          .lean();
+
+        if (chunks && chunks.length > 0) {
+          const scored = [];
+          for (const chunk of chunks) {
+            if (!chunk.embedding || !chunk.embedding.length) continue;
+            const sim = cosineSimilarity(queryEmbedding, chunk.embedding);
+            // Minimum semantic relevance threshold
+            if (sim >= 0.40) {
+              scored.push({
+                score: sim,
+                documentId: chunk.documentId,
+                title: chunk.title,
+                category: chunk.category,
+                source: chunk.source,
+                author: chunk.author,
+                chunkIndex: chunk.chunkIndex,
+                content: chunk.content,
+                tokenEstimate: chunk.tokenEstimate,
+              });
+            }
+          }
+
+          if (scored.length > 0) {
+            scored.sort((a, b) => b.score - a.score);
+            const topChunks = scored.slice(0, topK);
+            logger.info(
+              `[RAG] In-memory cosine similarity retrieved ${topChunks.length} chunks (top score: ${topChunks[0]?.score?.toFixed(3)})`
+            );
+            return topChunks;
+          }
+        }
+      } catch (memErr) {
+        logger.warn(`[RAG] In-memory semantic search error: ${memErr.message}`);
       }
     }
 
-    // Sort by descending score and take topK
-    scoredChunks.sort((a, b) => b.score - a.score);
-    const topChunks = scoredChunks.slice(0, topK);
-
-    logger.info(
-      `[RAG] Retrieved ${topChunks.length} chunks for query: "${query}" (top score: ${topChunks[0]?.score || 0})`
-    );
-
-    return topChunks;
+    // 4. Ultimate Fallback: Keyword search
+    logger.info(`[RAG] Executing keyword fallback retrieval for query: "${query}"`);
+    return await fallbackKeywordRetrieval(query, options);
   } catch (error) {
     logger.error(`[RAG] Error during context retrieval: ${error.message}`, error);
     return [];
@@ -349,7 +484,11 @@ async function getDocumentById(id) {
  * Delete a knowledge document and its chunks.
  */
 async function deleteDocument(id) {
-  return await KnowledgeDocument.findByIdAndDelete(id);
+  const [deletedDoc] = await Promise.all([
+    KnowledgeDocument.findByIdAndDelete(id),
+    KnowledgeChunk.deleteMany({ documentId: id }),
+  ]);
+  return deletedDoc;
 }
 
 module.exports = {
