@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Vector DB & Local Storage
+qdrant_storage/
+**/qdrant_storage/
+
+# Logs
+logs/
+**/logs/
+*.log
+
+# Build & Output
+dist/
+build/
+coverage/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -296,6 +296,12 @@ const clearAllConversations = asyncHandler(async (req, res) => {
   );
 });
 
+const getQdrantStatus = asyncHandler(async (req, res) => {
+  const qdrantService = require("../services/qdrant.service");
+  const stats = await qdrantService.getCollectionStats();
+  return apiResponse.success(res, "Qdrant vector database status fetched successfully", stats);
+});
+
 module.exports = {
   chat,
   getRecommendations,
@@ -304,6 +310,7 @@ module.exports = {
   listDocuments,
   getDocumentById,
   deleteDocument,
+  getQdrantStatus,
   listConversations,
   getConversationById,
   createConversation,
@@ -312,4 +319,5 @@ module.exports = {
   deleteConversation,
   clearAllConversations,
 };
+
 

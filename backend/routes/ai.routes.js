@@ -31,6 +31,11 @@ router.get("/rag/documents/:id", authenticate, aiController.getDocumentById);
 // Delete Document
 router.delete("/rag/documents/:id", authenticate, aiController.deleteDocument);
 
+// ==================== Sprint 20: Qdrant Vector DB Routes ====================
+// Qdrant Vector DB Collection Status & Health Check
+router.get("/rag/qdrant-status", authenticate, aiController.getQdrantStatus);
+
+
 // ==================== Sprint 18: AI Conversation & Chat Persistence ====================
 // List all conversations for the user
 router.get("/conversations", authenticate, aiController.listConversations);

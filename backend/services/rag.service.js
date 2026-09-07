@@ -7,6 +7,7 @@ const {
   generateBatchEmbeddings,
   cosineSimilarity,
 } = require("./embedding.service");
+const qdrantService = require("./qdrant.service");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -119,6 +120,25 @@ async function ingestDocument(docData, options = {}) {
       logger.error(`[RAG] Error inserting into KnowledgeChunk collection: ${chunkErr.message}`);
     }
 
+    // Also index into standalone Qdrant Vector Database
+    try {
+      const qdrantPayloads = chunksWithEmbeddings.map((chunk) => ({
+        documentId: savedDoc._id,
+        chunkIndex: chunk.chunkIndex,
+        title: savedDoc.title,
+        category: savedDoc.category,
+        source: savedDoc.source,
+        author: savedDoc.author,
+        content: chunk.content,
+        tokenEstimate: chunk.tokenEstimate,
+        keywords: chunk.keywords,
+        embedding: chunk.embedding,
+      }));
+      await qdrantService.upsertChunkVectors(qdrantPayloads);
+    } catch (qdrantErr) {
+      logger.warn(`[RAG] Qdrant vector indexing warning: ${qdrantErr.message}`);
+    }
+
     logger.info(
       `[RAG] Successfully ingested document '${title}' with ${chunks.length} chunks and embeddings (ID: ${savedDoc._id})`
     );
@@ -228,8 +248,28 @@ async function retrieveContext(query, options = {}) {
       logger.warn(`[RAG] Could not generate query embedding: ${embedErr.message}`);
     }
 
-    // 2. Primary: MongoDB Atlas Vector Search
+    // 2. Primary: Qdrant Standalone Vector Database Search
     if (queryEmbedding && queryEmbedding.length > 0) {
+      try {
+        const qdrantResults = await qdrantService.searchKnowledgeVectors({
+          queryVector: queryEmbedding,
+          category: categoryFilter,
+          topK,
+        });
+
+        if (qdrantResults && qdrantResults.length > 0) {
+          logger.info(
+            `[RAG] Qdrant Vector DB retrieved ${qdrantResults.length} chunks (top score: ${qdrantResults[0]?.score?.toFixed(3) || 0})`
+          );
+          return qdrantResults;
+        }
+      } catch (qdrantErr) {
+        logger.warn(
+          `[RAG] Qdrant Vector DB search unavailable (${qdrantErr.message}). Falling back to MongoDB/In-Memory search.`
+        );
+      }
+
+      // 3. Secondary Fallback: MongoDB Atlas Vector Search
       try {
         const vectorSearchStage = {
           index: "vector_index",
@@ -487,6 +527,7 @@ async function deleteDocument(id) {
   const [deletedDoc] = await Promise.all([
     KnowledgeDocument.findByIdAndDelete(id),
     KnowledgeChunk.deleteMany({ documentId: id }),
+    qdrantService.deleteDocumentVectors(id),
   ]);
   return deletedDoc;
 }

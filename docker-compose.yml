@@ -9,7 +9,18 @@ services:
       - "6379:6379"
     restart: always
 
-  # 2. Express Backend API Service
+  # 2. Qdrant Vector Database Service
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: football_qdrant
+    ports:
+      - "6333:6333" # HTTP REST API & Web Dashboard
+      - "6334:6334" # gRPC API
+    volumes:
+      - ./backend/qdrant_storage:/qdrant/storage:z
+    restart: always
+
+  # 3. Express Backend API Service
   backend:
     build:
       context: ./backend
@@ -21,8 +32,10 @@ services:
       - PORT=5000
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
       # Replace with your actual MongoDB URI or local connection string if running Mongo locally
       - MONGO_URI=${MONGO_URI:-mongodb://host.docker.internal:27017/football-copilot}
     depends_on:
       - redis
+      - qdrant
     restart: unless-stopped
