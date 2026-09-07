@@ -169,6 +169,11 @@ const executeToolCalls = async (functionCalls) => {
     const { name: functionName, args: functionArgs } = call;
     const handler = toolHandlers[functionName];
 
+    console.log(`\n=================== [TOOL CALL DISPATCHED] ===================`);
+    console.log(`🛠️  Tool Name : ${functionName}`);
+    console.log(`📥 Arguments : ${JSON.stringify(functionArgs, null, 2)}`);
+    console.log(`=============================================================\n`);
+
     if (!handler) {
       logger.warn(
         `[Tool Calling] Tool '${functionName}' requested by AI is not registered.`,
@@ -183,12 +188,19 @@ const executeToolCalls = async (functionCalls) => {
 
     try {
       logger.info(
-        `[Tool Calling] Executing tool '${functionName}' in parallel with args:`,
-        functionArgs,
+        `[Tool Calling] Executing tool '${functionName}' with args: ${JSON.stringify(functionArgs)}`,
       );
+      const startTime = Date.now();
       const executionResult = await handler(functionArgs);
+      const duration = Date.now() - startTime;
+
+      console.log(`\n=================== [TOOL RESULT RECEIVED] ===================`);
+      console.log(`✅ Tool Name : ${functionName} (took ${duration}ms)`);
+      console.log(`📤 Data Preview : ${JSON.stringify(executionResult).slice(0, 300)}...`);
+      console.log(`=============================================================\n`);
+
       logger.info(
-        `[Tool Calling] Tool '${functionName}' executed successfully.`,
+        `[Tool Calling] Tool '${functionName}' executed successfully in ${duration}ms.`,
       );
 
       return {
@@ -198,6 +210,7 @@ const executeToolCalls = async (functionCalls) => {
         },
       };
     } catch (execErr) {
+      console.error(`❌ [Tool Calling Error] ${functionName}:`, execErr.message);
       logger.error(
         `[Tool Calling] Error executing tool '${functionName}':`,
         execErr,
@@ -224,6 +237,9 @@ const generateChatResponse = async (prompt, history = []) => {
   if (!aiClient) {
     throw new Error("Gemini API key is missing in server environment.");
   }
+
+  console.log(`\n🤖 [AI Chat Request] Prompt: "${prompt}" | History length: ${history.length}`);
+  logger.info(`[AI Chat] Prompt: "${prompt}" | History length: ${history.length}`);
 
   // 1. Format history for the Gemini API (user / model roles)
   const contents = [];
@@ -252,6 +268,8 @@ const generateChatResponse = async (prompt, history = []) => {
     const MAX_LOOPS = 5; // Guard against infinite tool-calling loops
 
     while (loopCount < MAX_LOOPS) {
+      console.log(`🔄 [AI Chat Loop #${loopCount + 1}] Calling Gemini API (Model: ${selectedModel})...`);
+      
       // Send message to Gemini with registered tools
       const response = await aiClient.models.generateContent({
         model: selectedModel,
@@ -267,12 +285,15 @@ const generateChatResponse = async (prompt, history = []) => {
       // CASE A: No tool call requested. This is the final text answer from Gemini.
       if (!response.functionCalls || response.functionCalls.length === 0) {
         if (response && response.text) {
+          console.log(`💬 [AI Chat Final Response] Output received (${response.text.length} chars)`);
+          logger.info(`[AI Chat] Final answer delivered successfully without further tool calls.`);
           return response.text;
         }
         throw new Error("No text response returned from Gemini API.");
       }
 
       // CASE B: Gemini requested one or more tool calls.
+      console.log(`⚡ [Gemini Tool Call Triggered] Function Calls Count: ${response.functionCalls.length}`);
       logger.info(
         `[Tool Calling] Gemini requested tool execution: ${JSON.stringify(response.functionCalls)}`,
       );
@@ -299,6 +320,7 @@ const generateChatResponse = async (prompt, history = []) => {
       "Max tool calling loop threshold exceeded without a text response.",
     );
   } catch (error) {
+    console.error("❌ [AI Chat Error]:", error.message);
     logger.error("Error generating Gemini response with tools:", error);
     throw error;
   }
