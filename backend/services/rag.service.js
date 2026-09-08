@@ -428,12 +428,17 @@ Please answer the user query accurately using the retrieved context above where 
 
   const selectedModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
+  let activeSystemInstruction = RAG_SYSTEM_INSTRUCTION;
+  if (options.memoryPromptBlock) {
+    activeSystemInstruction += `\n\n${options.memoryPromptBlock}`;
+  }
+
   try {
     const response = await aiClient.models.generateContent({
       model: selectedModel,
       contents,
       config: {
-        systemInstruction: RAG_SYSTEM_INSTRUCTION,
+        systemInstruction: activeSystemInstruction,
         temperature: 0.4, // lower temperature for grounded factual consistency
         maxOutputTokens: 1000,
       },

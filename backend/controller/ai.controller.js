@@ -2,20 +2,33 @@ const asyncHandler = require("../utils/asyncHandler");
 const apiResponse = require("../utils/apiResponse");
 const aiService = require("../services/ai.service");
 const ragService = require("../services/rag.service");
+const memoryService = require("../services/memory.service");
 const recommendationService = require("../services/recommendation.service");
 const AiConversation = require("../models/aiConversation.model");
 
 const chat = asyncHandler(async (req, res) => {
-  const { prompt, history } = req.body;
+  const { prompt, history, useMemory = true } = req.body;
+  const userId = req.user?._id;
 
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
     return apiResponse.error(res, "Prompt string is required", 400);
   }
 
-  const responseText = await aiService.generateChatResponse(prompt, history || []);
+  let memoryPromptBlock = "";
+  let recalledMemories = [];
+  if (useMemory && userId) {
+    const memoryResult = await memoryService.recallUserContext(userId, prompt.trim());
+    memoryPromptBlock = memoryResult.memoryPromptBlock;
+    recalledMemories = memoryResult.recalledMemories;
+  }
+
+  const responseText = await aiService.generateChatResponse(prompt, history || [], {
+    memoryPromptBlock,
+  });
 
   return apiResponse.success(res, "AI response generated successfully", {
     response: responseText,
+    recalledMemories,
   });
 });
 
@@ -27,18 +40,31 @@ const getRecommendations = asyncHandler(async (req, res) => {
 // ==================== Sprint 18: RAG Endpoints ====================
 
 const queryRAG = asyncHandler(async (req, res) => {
-  const { query, history, category, topK } = req.body;
+  const { query, history, category, topK, useMemory = true } = req.body;
+  const userId = req.user?._id;
 
   if (!query || typeof query !== "string" || !query.trim()) {
     return apiResponse.error(res, "Query string is required for RAG.", 400);
   }
 
+  let memoryPromptBlock = "";
+  let recalledMemories = [];
+  if (useMemory && userId) {
+    const memoryResult = await memoryService.recallUserContext(userId, query.trim(), { category });
+    memoryPromptBlock = memoryResult.memoryPromptBlock;
+    recalledMemories = memoryResult.recalledMemories;
+  }
+
   const result = await ragService.generateRAGResponse(query, history || [], {
     category,
     topK: topK ? Number(topK) : 4,
+    memoryPromptBlock,
   });
 
-  return apiResponse.success(res, "RAG response generated successfully", result);
+  return apiResponse.success(res, "RAG response generated successfully", {
+    ...result,
+    recalledMemories,
+  });
 });
 
 const ingestDocument = asyncHandler(async (req, res) => {
@@ -109,6 +135,7 @@ const listConversations = asyncHandler(async (req, res) => {
         _id: 1,
         title: 1,
         category: 1,
+        summary: 1,
         isPinned: 1,
         createdAt: 1,
         updatedAt: 1,
@@ -145,7 +172,7 @@ const getConversationById = asyncHandler(async (req, res) => {
 
 const createConversation = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { title, category = "all", initialPrompt } = req.body;
+  const { title, category = "all" } = req.body;
 
   const conversation = new AiConversation({
     userId,
@@ -173,7 +200,7 @@ const createConversation = asyncHandler(async (req, res) => {
 const sendMessageToConversation = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user._id;
-  const { prompt, isRag = true, category } = req.body;
+  const { prompt, isRag = true, category, useMemory = true } = req.body;
 
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
     return apiResponse.error(res, "Prompt string is required", 400);
@@ -193,9 +220,21 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
     conversation.title = trimmedTitle;
   }
 
-  // Build history context for AI
+  // Recall user semantic facts and episodic context
+  let memoryPromptBlock = "";
+  let recalledMemories = [];
+  if (useMemory) {
+    const memoryResult = await memoryService.recallUserContext(userId, prompt.trim(), {
+      category: category || conversation.category,
+    });
+    memoryPromptBlock = memoryResult.memoryPromptBlock;
+    recalledMemories = memoryResult.recalledMemories;
+  }
+
+  // Build history context for AI (sliding window of last 10 messages)
   const historyContext = conversation.messages
     .filter((m) => !m.text.startsWith("**System Error:"))
+    .slice(-10)
     .map((m) => ({ sender: m.sender, text: m.text }));
 
   // Append user message
@@ -213,13 +252,15 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
     const ragResult = await ragService.generateRAGResponse(
       prompt,
       historyContext,
-      { category: category || conversation.category }
+      { category: category || conversation.category, memoryPromptBlock }
     );
     aiAnswer = ragResult.answer;
     sources = ragResult.sources || [];
     chunks = ragResult.chunks || [];
   } else {
-    aiAnswer = await aiService.generateChatResponse(prompt, historyContext);
+    aiAnswer = await aiService.generateChatResponse(prompt, historyContext, {
+      memoryPromptBlock,
+    });
   }
 
   // Append AI message
@@ -229,10 +270,24 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
     isRag: !!isRag,
     sources,
     chunks,
+    recalledMemories,
   };
   conversation.messages.push(aiMsgObj);
 
   await conversation.save();
+
+  // Async background processing: Extract facts & summarize thread
+  setImmediate(() => {
+    memoryService
+      .extractFactsFromTurns(userId, conversation._id, conversation.messages)
+      .catch((err) => console.warn("[MemoryAsync] Fact extraction warning:", err.message));
+
+    if (conversation.messages.length >= 8) {
+      memoryService
+        .summarizeAndArchiveConversation(userId, conversation._id)
+        .catch((err) => console.warn("[MemoryAsync] Summarization warning:", err.message));
+    }
+  });
 
   const savedUserMsg = conversation.messages[conversation.messages.length - 2];
   const savedAiMsg = conversation.messages[conversation.messages.length - 1];
@@ -302,6 +357,72 @@ const getQdrantStatus = asyncHandler(async (req, res) => {
   return apiResponse.success(res, "Qdrant vector database status fetched successfully", stats);
 });
 
+// ==================== Sprint 19: AI Memory Management Endpoints ====================
+
+const getUserMemories = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { category } = req.query;
+
+  const memories = await memoryService.getUserMemories(userId, { category });
+  return apiResponse.success(res, "User memories fetched successfully", memories);
+});
+
+const createUserMemory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { fact, category, confidence } = req.body;
+
+  if (!fact || !fact.trim()) {
+    return apiResponse.error(res, "Fact text is required", 400);
+  }
+
+  const memory = await memoryService.createUserMemory(userId, {
+    fact,
+    category,
+    confidence,
+  });
+
+  return apiResponse.success(res, "User memory created successfully", memory, 201);
+});
+
+const updateUserMemory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { id } = req.params;
+  const { fact, category, isActive } = req.body;
+
+  const updated = await memoryService.updateUserMemory(userId, id, {
+    fact,
+    category,
+    isActive,
+  });
+
+  if (!updated) {
+    return apiResponse.error(res, "Memory item not found", 404);
+  }
+
+  return apiResponse.success(res, "User memory updated successfully", updated);
+});
+
+const deleteUserMemory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { id } = req.params;
+
+  const deleted = await memoryService.deleteMemory(userId, id);
+  if (!deleted) {
+    return apiResponse.error(res, "Memory item not found or already deleted", 404);
+  }
+
+  return apiResponse.success(res, "User memory deleted successfully", { id });
+});
+
+const clearAllUserMemories = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const count = await memoryService.clearAllMemories(userId);
+  return apiResponse.success(res, "All user memories cleared successfully", {
+    deletedCount: count,
+  });
+});
+
 module.exports = {
   chat,
   getRecommendations,
@@ -318,6 +439,12 @@ module.exports = {
   updateConversation,
   deleteConversation,
   clearAllConversations,
+  getUserMemories,
+  createUserMemory,
+  updateUserMemory,
+  deleteUserMemory,
+  clearAllUserMemories,
 };
+
 
 

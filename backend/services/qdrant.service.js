@@ -1,4 +1,9 @@
-const { qdrantClient, DEFAULT_COLLECTION } = require("../config/qdrant");
+const {
+  qdrantClient,
+  DEFAULT_COLLECTION,
+  FACTS_MEMORY_COLLECTION,
+  EPISODIC_MEMORY_COLLECTION,
+} = require("../config/qdrant");
 const logger = require("../config/logger");
 
 /**
@@ -76,6 +81,38 @@ async function upsertChunkVectors(chunks = [], collectionName = DEFAULT_COLLECTI
 }
 
 /**
+ * Helper to query Qdrant using the unified query API (v1.19+) or fallback search method.
+ */
+async function executeVectorQuery(collectionName, { vector, limit = 4, scoreThreshold = 0.35, filter = null }) {
+  if (!vector || !Array.isArray(vector) || vector.length === 0) return [];
+
+  const queryParams = {
+    limit,
+    with_payload: true,
+    score_threshold: scoreThreshold,
+  };
+
+  if (filter) {
+    queryParams.filter = filter;
+  }
+
+  if (typeof qdrantClient.query === "function") {
+    const response = await qdrantClient.query(collectionName, {
+      query: vector,
+      ...queryParams,
+    });
+    return response?.points || (Array.isArray(response) ? response : []);
+  } else if (typeof qdrantClient.search === "function") {
+    return await qdrantClient.search(collectionName, {
+      vector,
+      ...queryParams,
+    });
+  }
+
+  return [];
+}
+
+/**
  * Search nearest vector chunks in Qdrant matching a query vector.
  *
  * @param {Object} params
@@ -95,16 +132,9 @@ async function searchKnowledgeVectors(
   }
 
   try {
-    const searchParams = {
-      vector: queryVector,
-      limit: topK,
-      with_payload: true,
-      score_threshold: scoreThreshold,
-    };
-
-    // Apply Qdrant payload filter if category is specified
+    let filter = null;
     if (category && category !== "all") {
-      searchParams.filter = {
+      filter = {
         must: [
           {
             key: "category",
@@ -114,7 +144,12 @@ async function searchKnowledgeVectors(
       };
     }
 
-    const results = await qdrantClient.search(collectionName, searchParams);
+    const results = await executeVectorQuery(collectionName, {
+      vector: queryVector,
+      limit: topK,
+      scoreThreshold,
+      filter,
+    });
 
     if (!results || results.length === 0) {
       return [];
@@ -171,6 +206,208 @@ async function deleteDocumentVectors(documentId, collectionName = DEFAULT_COLLEC
 }
 
 /**
+ * Upserts a single user semantic fact into Qdrant.
+ *
+ * @param {Object} params
+ * @param {string} params.memoryId - MongoDB UserMemory ObjectId
+ * @param {string} params.userId - User ObjectId
+ * @param {string} params.fact - Memory fact string
+ * @param {string} params.category - Memory category
+ * @param {number[]} params.embedding - 768-dim vector
+ * @returns {Promise<string|null>} Generated UUID point ID
+ */
+async function upsertUserFactVector({ memoryId, userId, fact, category, embedding }) {
+  if (!memoryId || !userId || !fact || !embedding || embedding.length === 0) return null;
+
+  try {
+    const pointId = mongoIdToUuid(memoryId);
+    await qdrantClient.upsert(FACTS_MEMORY_COLLECTION, {
+      wait: true,
+      points: [
+        {
+          id: pointId,
+          vector: embedding,
+          payload: {
+            memoryId: memoryId.toString(),
+            userId: userId.toString(),
+            category: category || "general",
+            fact,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      ],
+    });
+
+    logger.info(`[QdrantService] Upserted memory point '${pointId}' for user '${userId}'.`);
+    return pointId;
+  } catch (error) {
+    logger.warn(`[QdrantService] Failed to upsert user fact vector: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Searches semantic user facts in Qdrant matching a query vector for a specific user.
+ *
+ * @param {Object} params
+ * @param {string} params.userId - Target user ID (tenant filter)
+ * @param {number[]} params.queryVector - 768-dim query vector
+ * @param {string} [params.category] - Optional category filter
+ * @param {number} [params.limit=5]
+ * @param {number} [params.scoreThreshold=0.38]
+ * @returns {Promise<Array<Object>>}
+ */
+async function searchUserFacts({ userId, queryVector, category, limit = 5, scoreThreshold = 0.38 }) {
+  if (!userId || !queryVector || queryVector.length === 0) return [];
+
+  try {
+    const mustFilters = [
+      {
+        key: "userId",
+        match: { value: userId.toString() },
+      },
+    ];
+
+    if (category && category !== "all") {
+      mustFilters.push({
+        key: "category",
+        match: { value: category },
+      });
+    }
+
+    const results = await executeVectorQuery(FACTS_MEMORY_COLLECTION, {
+      vector: queryVector,
+      limit,
+      scoreThreshold,
+      filter: { must: mustFilters },
+    });
+
+    return results.map((item) => ({
+      memoryId: item.payload?.memoryId || item.id,
+      fact: item.payload?.fact,
+      category: item.payload?.category,
+      score: item.score,
+    }));
+  } catch (error) {
+    logger.warn(`[QdrantService] User facts search error: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Deletes a specific user fact from Qdrant by memory ID.
+ */
+async function deleteUserFactVector(memoryId) {
+  if (!memoryId) return false;
+  try {
+    const pointId = mongoIdToUuid(memoryId);
+    await qdrantClient.delete(FACTS_MEMORY_COLLECTION, {
+      points: [pointId],
+    });
+    return true;
+  } catch (error) {
+    logger.warn(`[QdrantService] Error deleting memory point: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Upserts a conversation episodic summary into Qdrant.
+ */
+async function upsertUserEpisodicVector({ conversationId, userId, summary, keyTopics = [], embedding }) {
+  if (!conversationId || !userId || !summary || !embedding || embedding.length === 0) return null;
+
+  try {
+    const pointId = mongoIdToUuid(conversationId);
+    await qdrantClient.upsert(EPISODIC_MEMORY_COLLECTION, {
+      wait: true,
+      points: [
+        {
+          id: pointId,
+          vector: embedding,
+          payload: {
+            conversationId: conversationId.toString(),
+            userId: userId.toString(),
+            summary,
+            keyTopics,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      ],
+    });
+
+    logger.info(`[QdrantService] Upserted episodic memory for conv '${conversationId}'.`);
+    return pointId;
+  } catch (error) {
+    logger.warn(`[QdrantService] Failed to upsert episodic vector: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Searches episodic past conversation memories for a user.
+ */
+async function searchUserEpisodicMemories({ userId, queryVector, limit = 3, scoreThreshold = 0.35 }) {
+  if (!userId || !queryVector || queryVector.length === 0) return [];
+
+  try {
+    const results = await executeVectorQuery(EPISODIC_MEMORY_COLLECTION, {
+      vector: queryVector,
+      limit,
+      scoreThreshold,
+      filter: {
+        must: [
+          {
+            key: "userId",
+            match: { value: userId.toString() },
+          },
+        ],
+      },
+    });
+
+    return results.map((item) => ({
+      conversationId: item.payload?.conversationId,
+      summary: item.payload?.summary,
+      keyTopics: item.payload?.keyTopics || [],
+      score: item.score,
+    }));
+  } catch (error) {
+    logger.warn(`[QdrantService] Episodic memories search error: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Wipes all vector points associated with a user across all memory collections (GDPR compliance).
+ */
+async function clearAllUserVectors(userId) {
+  if (!userId) return false;
+  try {
+    const filter = {
+      filter: {
+        must: [
+          {
+            key: "userId",
+            match: { value: userId.toString() },
+          },
+        ],
+      },
+    };
+
+    await Promise.all([
+      qdrantClient.delete(FACTS_MEMORY_COLLECTION, filter),
+      qdrantClient.delete(EPISODIC_MEMORY_COLLECTION, filter),
+    ]);
+
+    logger.info(`[QdrantService] Cleared all memory vectors for user '${userId}'.`);
+    return true;
+  } catch (error) {
+    logger.error(`[QdrantService] Error clearing user vectors: ${error.message}`);
+    return false;
+  }
+}
+
+/**
  * Get collection status and statistics.
  *
  * @param {string} [collectionName=DEFAULT_COLLECTION]
@@ -199,5 +436,11 @@ module.exports = {
   upsertChunkVectors,
   searchKnowledgeVectors,
   deleteDocumentVectors,
+  upsertUserFactVector,
+  searchUserFacts,
+  deleteUserFactVector,
+  upsertUserEpisodicVector,
+  searchUserEpisodicMemories,
+  clearAllUserVectors,
   getCollectionStats,
 };

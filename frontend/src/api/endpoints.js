@@ -42,6 +42,8 @@ const endpoints = {
     conversations: "/ai/conversations",
     conversationById: (id) => `/ai/conversations/${id}`,
     conversationMessages: (id) => `/ai/conversations/${id}/messages`,
+    memories: "/ai/memories",
+    memoryById: (id) => `/ai/memories/${id}`,
   },
   notifications: {
     get: "/notifications",

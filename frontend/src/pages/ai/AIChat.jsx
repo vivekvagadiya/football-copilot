@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft,
   RotateCcw, History, Plus, MessageSquareCode, BookOpen,
-  Database, Award, ShieldCheck, Filter, ChevronRight
+  Database, Award, ShieldCheck, Filter, ChevronRight, Brain
 } from 'lucide-react';
 import { 
   getAiConversationsApi, 
@@ -12,16 +12,19 @@ import {
   sendMessageToAiConversationApi, 
   deleteAiConversationApi, 
   clearAllAiConversationsApi,
-  getKnowledgeDocumentsApi 
+  getKnowledgeDocumentsApi,
+  getUserMemoriesApi
 } from '../../api/ai.api';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { AIResponseCard } from '../../components/ai/AIResponseCard';
 import { KnowledgeBaseDrawer } from '../../components/ai/KnowledgeBaseDrawer';
+import { MemoryManagerDrawer } from '../../components/ai/MemoryManagerDrawer';
 import { useApp } from '../../context/AppContext';
 import { Drawer } from '../../components/ui/Drawer';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getCleanErrorMessage } from '../../api/axios';
 
 // Keep track of processed prompt keys to prevent double-execution in StrictMode
 const processedPrompts = new Set();
@@ -55,12 +58,27 @@ export const AIChat = () => {
   const [isKnowledgeDrawerOpen, setIsKnowledgeDrawerOpen] = useState(false);
   const [knowledgeDocCount, setKnowledgeDocCount] = useState(0);
 
+  // Sprint 19: Continuous AI Memory States
+  const [useMemory, setUseMemory] = useState(true);
+  const [isMemoryDrawerOpen, setIsMemoryDrawerOpen] = useState(false);
+  const [userMemoriesCount, setUserMemoriesCount] = useState(0);
+
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const intervalRef = useRef(null);
 
+  const fetchMemoriesCount = () => {
+    getUserMemoriesApi()
+      .then((res) => {
+        const count = Array.isArray(res?.data) ? res.data.length : 0;
+        setUserMemoriesCount(count);
+      })
+      .catch(() => {});
+  };
+
   // Load conversations from MongoDB on mount
   useEffect(() => {
+    fetchMemoriesCount();
     const fetchConversations = async () => {
       setLoadingThreads(true);
       try {
@@ -163,7 +181,14 @@ export const AIChat = () => {
   };
 
   // Streaming typewriter effect for AI response
-  const streamAIResponse = (threadId, fullResponse, sources = [], chunks = [], isRag = false) => {
+  const streamAIResponse = (
+    threadId,
+    fullResponse,
+    sources = [],
+    chunks = [],
+    isRag = false,
+    recalledMemories = []
+  ) => {
     let currentText = '';
     const words = fullResponse.split(' ');
     let wordIdx = 0;
@@ -183,6 +208,7 @@ export const AIChat = () => {
                 sources,
                 chunks,
                 isRag,
+                recalledMemories,
               },
             ],
           };
@@ -201,7 +227,14 @@ export const AIChat = () => {
                 ...t,
                 messages: (t.messages || []).map((msg) =>
                   msg._id === tempId
-                    ? { ...msg, text: currentText, sources, chunks, isRag }
+                    ? {
+                        ...msg,
+                        text: currentText,
+                        sources,
+                        chunks,
+                        isRag,
+                        recalledMemories,
+                      }
                     : msg
                 ),
               };
@@ -213,6 +246,7 @@ export const AIChat = () => {
       } else {
         clearInterval(interval);
         setIsTyping(false);
+        fetchMemoriesCount(); // background extraction may have learned a new fact
       }
     }, 18);
 
@@ -269,11 +303,12 @@ export const AIChat = () => {
     );
 
     try {
-      // Send to MongoDB backed endpoint (executes RAG/AI and persists turns in DB)
+      // Send to MongoDB backed endpoint (executes RAG/AI, recalls memory, and persists turns in DB)
       const res = await sendMessageToAiConversationApi(currentThreadId, {
         prompt: currentInput,
         isRag: isRagMode,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        useMemory,
       });
 
       const { aiMessage, title } = res?.data || {};
@@ -291,17 +326,19 @@ export const AIChat = () => {
           aiMessage.text,
           aiMessage.sources || [],
           aiMessage.chunks || [],
-          aiMessage.isRag || isRagMode
+          aiMessage.isRag || isRagMode,
+          aiMessage.recalledMemories || []
         );
       } else {
         setIsTyping(false);
       }
     } catch (err) {
       setIsTyping(false);
-      const errMsg =
+      const rawErrMsg =
         err?.response?.data?.message ||
         err?.message ||
         'Could not connect to AI service.';
+      const cleanErrMsg = getCleanErrorMessage(rawErrMsg);
 
       setThreads((prev) =>
         prev.map((t) => {
@@ -313,7 +350,7 @@ export const AIChat = () => {
                 {
                   _id: `err-${Date.now()}`,
                   sender: 'ai',
-                  text: `**System Error:** ${errMsg}`,
+                  text: `**Service Notice:** ${cleanErrMsg}`,
                 },
               ],
             };
@@ -442,8 +479,8 @@ export const AIChat = () => {
           </div>
         )}
 
-        {/* Knowledge Base Explorer Button in Sidebar */}
-        <div className="pt-2 border-t border-border/40">
+        {/* Knowledge Base & Tactical Memory Hub in Sidebar */}
+        <div className="pt-2 border-t border-border/40 space-y-1.5">
           <button
             onClick={() => setIsKnowledgeDrawerOpen(true)}
             className="w-full p-2.5 rounded-xl border border-primary/20 bg-primary/[0.04] hover:bg-primary/[0.08] hover:border-primary/40 transition-all text-left flex items-center justify-between group cursor-pointer"
@@ -464,6 +501,29 @@ export const AIChat = () => {
             <ChevronRight
               size={14}
               className="text-muted group-hover:text-primary transition-colors"
+            />
+          </button>
+
+          <button
+            onClick={() => setIsMemoryDrawerOpen(true)}
+            className="w-full p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08] hover:border-emerald-500/40 transition-all text-left flex items-center justify-between group cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-md bg-emerald-500/10 text-emerald-400">
+                <Brain size={13} />
+              </span>
+              <div>
+                <div className="text-xs font-bold text-text group-hover:text-emerald-400 transition-colors">
+                  Tactical Memory
+                </div>
+                <div className="text-[9px] text-muted">
+                  {userMemoriesCount} learned preferences
+                </div>
+              </div>
+            </div>
+            <ChevronRight
+              size={14}
+              className="text-muted group-hover:text-emerald-400 transition-colors"
             />
           </button>
         </div>
@@ -510,6 +570,13 @@ export const AIChat = () => {
         onSelectDocumentPrompt={(prompt) => handleSendMessage(prompt)}
       />
 
+      {/* Tactical Memory Drawer */}
+      <MemoryManagerDrawer
+        isOpen={isMemoryDrawerOpen}
+        onClose={() => setIsMemoryDrawerOpen(false)}
+        onMemoryUpdated={fetchMemoriesCount}
+      />
+
       {/* Center panel (Active Chat Room) */}
       <div className="flex-1 flex flex-col justify-between bg-background/30 min-w-0">
         {/* Chat Area Header */}
@@ -536,6 +603,23 @@ export const AIChat = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Memory button in header */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsMemoryDrawerOpen(true)}
+              className="hidden sm:flex text-[10px] py-1 px-2.5 h-8 font-semibold items-center gap-1.5 text-text hover:text-emerald-400 hover:border-emerald-500/40"
+              title="Inspect & Manage Learned Memory"
+            >
+              <Brain size={11} className="text-emerald-400" />
+              <span>Memory</span>
+              {userMemoriesCount > 0 && (
+                <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                  {userMemoriesCount}
+                </span>
+              )}
+            </Button>
+
             {/* Knowledge Base button in header for desktop */}
             <Button
               variant="outline"
@@ -570,9 +654,10 @@ export const AIChat = () => {
           </div>
         </div>
 
-        {/* Sub-header: RAG Mode Switcher & Category Filter Pills */}
+        {/* Sub-header: RAG Mode & Memory Personalization Switchers */}
         <div className="px-4 py-2 border-b border-border/50 bg-card/40 flex items-center justify-between gap-3 overflow-x-auto shrink-0 no-scrollbar">
           <div className="flex items-center gap-2 shrink-0">
+            {/* RAG Mode Switch */}
             <button
               onClick={() => setIsRagMode(!isRagMode)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
@@ -588,6 +673,24 @@ export const AIChat = () => {
               />
               <span>{isRagMode ? 'Grounded RAG Mode' : 'Standard AI Mode'}</span>
               <span className={`w-1.5 h-1.5 rounded-full ${isRagMode ? 'bg-primary' : 'bg-muted'}`} />
+            </button>
+
+            {/* Continuous Memory Switch */}
+            <button
+              onClick={() => setUseMemory(!useMemory)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                useMemory
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm'
+                  : 'bg-card border-border/70 text-muted hover:text-text'
+              }`}
+              title={useMemory ? 'Personalized Memory is Active' : 'Click to enable Memory Personalization'}
+            >
+              <Brain
+                size={12}
+                className={useMemory ? 'text-emerald-400 animate-pulse' : 'text-muted'}
+              />
+              <span>{useMemory ? 'Personalized Memory' : 'Memory Off'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${useMemory ? 'bg-emerald-400' : 'bg-muted'}`} />
             </button>
           </div>
 
@@ -637,6 +740,7 @@ export const AIChat = () => {
                           content={m.text}
                           sources={m.sources || []}
                           chunks={m.chunks || []}
+                          recalledMemories={m.recalledMemories || []}
                           isRag={m.isRag || false}
                         />
                       </div>

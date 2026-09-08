@@ -58,5 +58,21 @@ router.patch("/conversations/:id", authenticate, aiController.updateConversation
 // Delete single conversation
 router.delete("/conversations/:id", authenticate, aiController.deleteConversation);
 
+// ==================== Sprint 19: AI Memory Management Routes ====================
+// List all user memories & preferences
+router.get("/memories", authenticate, aiController.getUserMemories);
+
+// Manually add a user memory / fact
+router.post("/memories", authenticate, aiController.createUserMemory);
+
+// Update a memory fact or status
+router.patch("/memories/:id", authenticate, aiController.updateUserMemory);
+
+// Delete a specific memory item
+router.delete("/memories/:id", authenticate, aiController.deleteUserMemory);
+
+// Clear all memories for the user (GDPR wipe)
+router.delete("/memories", authenticate, aiController.clearAllUserMemories);
+
 module.exports = router;
 

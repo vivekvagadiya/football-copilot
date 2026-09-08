@@ -5,11 +5,17 @@ const connectDB = require("./config/db");
 const initCleanupJob = require("./jobs/cleanupFavorites.job");
 const initSyncLiveMatchesJob = require("./jobs/syncLiveMatches.job");
 const initGenerateNotificationsJob = require("./jobs/generateNotifications.job");
+const { initAllQdrantCollections } = require("./config/qdrant");
 
 const PORT = process.env.PORT || 8000;
 
 const startServer = async () => {
   await connectDB();
+
+  // Initialize Qdrant Collections (Knowledge & Multi-Tier Memory)
+  await initAllQdrantCollections().catch((err) => {
+    console.warn("Qdrant initialization non-fatal warning:", err.message);
+  });
 
   // Initialize Cron Jobs
   initCleanupJob();

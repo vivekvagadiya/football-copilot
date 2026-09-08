@@ -37,6 +37,21 @@ const aiMessageSchema = new mongoose.Schema(
         score: Number,
       },
     ],
+    recalledMemories: [
+      {
+        memoryId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "UserMemory",
+        },
+        category: String,
+        fact: String,
+        type: {
+          type: String,
+          enum: ["fact", "episodic"],
+          default: "fact",
+        },
+      },
+    ],
     createdAt: {
       type: Date,
       default: Date.now,
@@ -63,6 +78,14 @@ const aiConversationSchema = new mongoose.Schema(
       type: String,
       enum: ["all", "tactics", "rules", "scouting", "history", "general"],
       default: "all",
+    },
+    summary: {
+      type: String,
+      default: "",
+    },
+    memorySyncedAt: {
+      type: Date,
+      default: null,
     },
     isPinned: {
       type: Boolean,

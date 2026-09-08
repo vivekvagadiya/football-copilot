@@ -233,13 +233,18 @@ const executeToolCalls = async (functionCalls) => {
  * @param {Array<{sender: string, text: string}>} history - Previous messages in chat thread
  * @returns {Promise<string>} AI response text
  */
-const generateChatResponse = async (prompt, history = []) => {
+const generateChatResponse = async (prompt, history = [], options = {}) => {
   if (!aiClient) {
     throw new Error("Gemini API key is missing in server environment.");
   }
 
   console.log(`\n🤖 [AI Chat Request] Prompt: "${prompt}" | History length: ${history.length}`);
   logger.info(`[AI Chat] Prompt: "${prompt}" | History length: ${history.length}`);
+
+  let activeSystemInstruction = SYSTEM_INSTRUCTION;
+  if (options.memoryPromptBlock) {
+    activeSystemInstruction += `\n\n${options.memoryPromptBlock}`;
+  }
 
   // 1. Format history for the Gemini API (user / model roles)
   const contents = [];
@@ -275,7 +280,7 @@ const generateChatResponse = async (prompt, history = []) => {
         model: selectedModel,
         contents: contents,
         config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
+          systemInstruction: activeSystemInstruction,
           tools: footballTools,
           temperature: 0.7,
           maxOutputTokens: 500,
