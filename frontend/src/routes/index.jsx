@@ -28,6 +28,7 @@ import Notifications from '../pages/core/Notifications';
 import Profile from '../pages/core/Profile';
 import Settings from '../pages/core/Settings';
 import AIChat from '../pages/ai/AIChat';
+import PlannerStudio from '../pages/ai/PlannerStudio';
 import NotFound from '../pages/core/NotFound';
 
 // Route Guards
@@ -82,6 +83,8 @@ export const AppRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/ai" element={<AIChat />} />
+        <Route path="/planner" element={<PlannerStudio />} />
+        <Route path="/ai/planner" element={<PlannerStudio />} />
       </Route>
 
       {/* Fallbacks */}

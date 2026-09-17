@@ -12,6 +12,7 @@ const footballRoutes = require("./routes/football.routes");
 const favoriteRoutes = require("./routes/favorite.routes");
 const aiRoutes = require("./routes/ai.routes");
 const notificationRoutes = require("./routes/notification.routes");
+const plannerRoutes = require("./routes/planner.routes");
 
 const clientUrl = process.env.CLIENT_URL
   ? process.env.CLIENT_URL
@@ -22,6 +23,7 @@ app.use(
     origin: [
       clientUrl,
       "http://localhost:5173",
+      "http://localhost:5174",
       "http://127.0.0.1:5173",
       "http://localhost:3000",
       "http://127.0.0.1:3000",
@@ -45,6 +47,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/football", footballRoutes);
 app.use("/api/v1/favorites", favoriteRoutes);
 app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/planner", plannerRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 app.use((req, res) => {

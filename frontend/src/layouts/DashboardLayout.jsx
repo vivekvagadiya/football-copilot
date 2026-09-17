@@ -28,6 +28,7 @@ export const DashboardLayout = () => {
     { name: 'Live Engine', path: '/live', icon: Zap, badge: 'LIVE' },
     { name: 'Fixtures', path: '/fixtures', icon: Calendar },
     { name: 'AI Copilot', path: '/ai', icon: Cpu, accent: true },
+    { name: 'Tactical Planner', path: '/planner', icon: Compass, badge: 'AGENT' },
     { name: 'Leagues', path: '/leagues', icon: Award },
     { name: 'Teams', path: '/teams', icon: Shield },
     { name: 'Players', path: '/players', icon: User2 },

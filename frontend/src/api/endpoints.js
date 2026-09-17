@@ -45,6 +45,14 @@ const endpoints = {
     memories: "/ai/memories",
     memoryById: (id) => `/ai/memories/${id}`,
   },
+  planner: {
+    templates: "/planner/templates",
+    generate: "/planner/generate",
+    plans: "/planner",
+    planById: (id) => `/planner/${id}`,
+    checklist: (id) => `/planner/${id}/checklist`,
+    status: (id) => `/planner/${id}/status`,
+  },
   notifications: {
     get: "/notifications",
     markRead: (id) => `/notifications/${id}/read`,

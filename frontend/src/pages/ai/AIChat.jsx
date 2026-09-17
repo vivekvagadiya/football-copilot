@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft,
   RotateCcw, History, Plus, MessageSquareCode, BookOpen,
-  Database, Award, ShieldCheck, Filter, ChevronRight, Brain
+  Database, Award, ShieldCheck, Filter, ChevronRight, Brain, Compass
 } from 'lucide-react';
 import { 
   getAiConversationsApi, 
@@ -618,6 +618,18 @@ export const AIChat = () => {
                   {userMemoriesCount}
                 </span>
               )}
+            </Button>
+
+            {/* Tactical Planner Agent link */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/planner')}
+              className="hidden lg:flex text-[10px] py-1 px-2.5 h-8 font-semibold items-center gap-1.5 text-text hover:text-primary hover:border-primary/40"
+              title="Launch Tactical Planner Studio"
+            >
+              <Compass size={11} className="text-primary animate-spin-slow" />
+              <span>Planner</span>
             </Button>
 
             {/* Knowledge Base button in header for desktop */}
