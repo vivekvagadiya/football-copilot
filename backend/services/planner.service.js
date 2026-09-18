@@ -4,6 +4,7 @@ const footballService = require("./football.service");
 const memoryService = require("./memory.service");
 const qdrantService = require("./qdrant.service");
 const { generateEmbedding } = require("./embedding.service");
+const { generateContentWithFallback } = require("../utils/geminiHelper");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -205,7 +206,7 @@ ${contextSnippet || "No extra database records provided. Use expert modern footb
 
 Generate the complete Tactical Masterplan JSON.`;
 
-  const response = await aiClient.models.generateContent({
+  const response = await generateContentWithFallback(aiClient, {
     model: modelName,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {

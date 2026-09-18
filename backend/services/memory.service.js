@@ -3,6 +3,7 @@ const UserMemory = require("../models/userMemory.model");
 const AiConversation = require("../models/aiConversation.model");
 const qdrantService = require("./qdrant.service");
 const { generateEmbedding } = require("./embedding.service");
+const { generateContentWithFallback, DEFAULT_LITE_MODEL } = require("../utils/geminiHelper");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -188,9 +189,8 @@ Return a valid JSON object matching this schema:
   ]
 }`;
 
-    const envModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const response = await aiClient.models.generateContent({
-      model: envModel,
+    const response = await generateContentWithFallback(aiClient, {
+      model: DEFAULT_LITE_MODEL,
       contents: [{ role: "user", parts: [{ text: extractionPrompt }] }],
       config: {
         temperature: 0.2,
@@ -290,9 +290,8 @@ Return JSON matching:
   "keyTopics": ["topic1", "topic2"]
 }`;
 
-    const envModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const response = await aiClient.models.generateContent({
-      model: envModel,
+    const response = await generateContentWithFallback(aiClient, {
+      model: DEFAULT_LITE_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         temperature: 0.3,

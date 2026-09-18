@@ -1,4 +1,5 @@
 const { GoogleGenAI } = require("@google/genai");
+const { generateContentWithFallback } = require("../utils/geminiHelper");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -276,7 +277,7 @@ const generateChatResponse = async (prompt, history = [], options = {}) => {
       console.log(`🔄 [AI Chat Loop #${loopCount + 1}] Calling Gemini API (Model: ${selectedModel})...`);
       
       // Send message to Gemini with registered tools
-      const response = await aiClient.models.generateContent({
+      const response = await generateContentWithFallback(aiClient, {
         model: selectedModel,
         contents: contents,
         config: {
@@ -351,7 +352,7 @@ ${JSON.stringify(matchData, null, 2)}`;
   const selectedModel = envModel ? envModel : "gemini-2.0-flash";
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await generateContentWithFallback(aiClient, {
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
@@ -398,7 +399,7 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
   const selectedModel = envModel ? envModel : "gemini-2.0-flash";
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await generateContentWithFallback(aiClient, {
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
@@ -469,7 +470,7 @@ You must return a structured JSON response matching this schema:
   const selectedModel = envModel ? envModel : "gemini-2.0-flash";
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await generateContentWithFallback(aiClient, {
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
@@ -535,7 +536,7 @@ You must return a structured JSON object containing an array of notifications:
   const selectedModel = envModel ? envModel : "gemini-2.0-flash";
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await generateContentWithFallback(aiClient, {
       model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {

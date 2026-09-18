@@ -8,6 +8,7 @@ const {
   cosineSimilarity,
 } = require("./embedding.service");
 const qdrantService = require("./qdrant.service");
+const { generateContentWithFallback } = require("../utils/geminiHelper");
 const logger = require("../config/logger");
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -434,7 +435,7 @@ Please answer the user query accurately using the retrieved context above where 
   }
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await generateContentWithFallback(aiClient, {
       model: selectedModel,
       contents,
       config: {
