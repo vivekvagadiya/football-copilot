@@ -13,6 +13,7 @@ const favoriteRoutes = require("./routes/favorite.routes");
 const aiRoutes = require("./routes/ai.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const plannerRoutes = require("./routes/planner.routes");
+const multiAgentRoutes = require("./routes/multiAgent.routes");
 
 const clientUrl = process.env.CLIENT_URL
   ? process.env.CLIENT_URL
@@ -48,6 +49,7 @@ app.use("/api/v1/football", footballRoutes);
 app.use("/api/v1/favorites", favoriteRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/planner", plannerRoutes);
+app.use("/api/v1/agents", multiAgentRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 app.use((req, res) => {

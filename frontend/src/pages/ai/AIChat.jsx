@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft,
   RotateCcw, History, Plus, MessageSquareCode, BookOpen,
-  Database, Award, ShieldCheck, Filter, ChevronRight, Brain, Compass
+  Database, Award, ShieldCheck, Filter, ChevronRight, Brain, Compass, Users2
 } from 'lucide-react';
 import { 
   getAiConversationsApi, 
@@ -630,6 +630,18 @@ export const AIChat = () => {
             >
               <Compass size={11} className="text-primary animate-spin-slow" />
               <span>Planner</span>
+            </Button>
+
+            {/* Backroom Staff Multi-Agent Studio link */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/agents')}
+              className="hidden xl:flex text-[10px] py-1 px-2.5 h-8 font-semibold items-center gap-1.5 text-text hover:text-primary hover:border-primary/40"
+              title="Open Backroom Staff Multi-Agent Studio"
+            >
+              <Users2 size={11} className="text-primary" />
+              <span>Staff</span>
             </Button>
 
             {/* Knowledge Base button in header for desktop */}

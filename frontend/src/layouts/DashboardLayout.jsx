@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Zap, Calendar, Award, Shield, User2, 
   Newspaper, ArrowRightLeft, Star, Bell, Settings, Cpu,
   Menu, ChevronLeft, ChevronRight, Search as SearchIcon, 
-  Sun, Moon, LogOut, Compass
+  Sun, Moon, LogOut, Compass, Users2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
@@ -29,6 +29,7 @@ export const DashboardLayout = () => {
     { name: 'Fixtures', path: '/fixtures', icon: Calendar },
     { name: 'AI Copilot', path: '/ai', icon: Cpu, accent: true },
     { name: 'Tactical Planner', path: '/planner', icon: Compass, badge: 'AGENT' },
+    { name: 'Backroom Staff', path: '/agents', icon: Users2, badge: 'MULTI' },
     { name: 'Leagues', path: '/leagues', icon: Award },
     { name: 'Teams', path: '/teams', icon: Shield },
     { name: 'Players', path: '/players', icon: User2 },

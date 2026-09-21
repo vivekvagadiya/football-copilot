@@ -53,6 +53,11 @@ const endpoints = {
     checklist: (id) => `/planner/${id}/checklist`,
     status: (id) => `/planner/${id}/status`,
   },
+  agents: {
+    registry: "/agents/registry",
+    collaborate: "/agents/collaborate",
+    chat: (agentId) => `/agents/chat/${agentId}`,
+  },
   notifications: {
     get: "/notifications",
     markRead: (id) => `/notifications/${id}/read`,
