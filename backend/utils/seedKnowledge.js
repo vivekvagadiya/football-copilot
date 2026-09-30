@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const { ingestDocument } = require("../services/rag.service");
 const KnowledgeDocument = require("../models/knowledgeDocument.model");
+const KnowledgeChunk = require("../models/knowledgeChunk.model");
 const logger = require("../config/logger");
 
 const SEED_DOCUMENTS = [
@@ -159,7 +160,19 @@ async function seedKnowledgeBase() {
       // Check if document already exists by title
       const existing = await KnowledgeDocument.findOne({ title: doc.title });
       if (existing) {
-        logger.info(`[Knowledge Seeder] Document '${doc.title}' already exists. Skipping.`);
+        // Check if chunks have embeddings and exist in KnowledgeChunk collection
+        const chunkCount = await KnowledgeChunk.countDocuments({ documentId: existing._id });
+        const hasEmbeddings = existing.chunks?.[0]?.embedding?.length > 0;
+
+        if (chunkCount === 0 || !hasEmbeddings) {
+          logger.info(`[Knowledge Seeder] Re-indexing '${doc.title}' with embeddings...`);
+          await KnowledgeDocument.findByIdAndDelete(existing._id);
+          await KnowledgeChunk.deleteMany({ documentId: existing._id });
+          await ingestDocument(doc, { chunkSize: 550, chunkOverlap: 100 });
+          logger.info(`[Knowledge Seeder] Re-ingested with embeddings: "${doc.title}"`);
+        } else {
+          logger.info(`[Knowledge Seeder] Document '${doc.title}' already exists with embeddings. Skipping.`);
+        }
         continue;
       }
 

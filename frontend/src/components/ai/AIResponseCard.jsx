@@ -7,10 +7,11 @@ import {
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
-export const AIResponseCard = ({ content, sources = [], chunks = [], isRag = false }) => {
+export const AIResponseCard = ({ content, sources = [], chunks = [], recalledMemories = [], isRag = false }) => {
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState(null); // 'up' | 'down' | null
   const [showSources, setShowSources] = useState(false);
+  const [showMemories, setShowMemories] = useState(false);
   const [activeChunkTab, setActiveChunkTab] = useState(0);
 
   const handleCopy = async () => {
@@ -41,6 +42,8 @@ export const AIResponseCard = ({ content, sources = [], chunks = [], isRag = fal
       default: return 'default';
     }
   };
+
+  const hasMemories = Array.isArray(recalledMemories) && recalledMemories.length > 0;
 
   // Helper to parse citations like [Doc: "Title", Chunk #1] into clickable/styled badge
   const parseCitationsAndFormatting = (text) => {
@@ -203,6 +206,15 @@ export const AIResponseCard = ({ content, sources = [], chunks = [], isRag = fal
                 <Sparkles size={10} /> Grounded RAG
               </Badge>
             )}
+            {hasMemories && (
+              <button
+                onClick={() => setShowMemories(!showMemories)}
+                className="text-[9px] py-0 px-2 flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-full font-bold cursor-pointer hover:bg-emerald-500/25 transition-all shadow-sm"
+                title="Click to view personalized memories recalled for this response"
+              >
+                <span>🧠 {recalledMemories.length} {recalledMemories.length === 1 ? 'Memory' : 'Memories'}</span>
+              </button>
+            )}
           </div>
           
           {/* Action buttons (Copy + Feedback) */}
@@ -239,6 +251,39 @@ export const AIResponseCard = ({ content, sources = [], chunks = [], isRag = fal
         <div className="space-y-0.5 overflow-hidden">
           {renderFormatted(content)}
         </div>
+
+        {/* Recalled Memory Personalization Details */}
+        {hasMemories && showMemories && (
+          <div className="mt-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span>🧠</span> Active Memory Context Applied ({recalledMemories.length})
+              </span>
+              <button
+                onClick={() => setShowMemories(false)}
+                className="text-muted hover:text-text text-[9px] font-semibold"
+              >
+                Hide
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {recalledMemories.map((mem, mIdx) => (
+                <div
+                  key={mIdx}
+                  className="p-2 rounded-lg bg-background/60 border border-emerald-500/15 text-[10.5px] flex items-start justify-between gap-2"
+                >
+                  <div className="flex items-start gap-1.5 min-w-0">
+                    <span className="text-emerald-400 font-bold text-xs mt-0.5">•</span>
+                    <span className="text-text/90 leading-relaxed font-medium">{mem.fact}</span>
+                  </div>
+                  <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 uppercase font-bold shrink-0">
+                    {mem.category || mem.type || 'Profile'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Grounded RAG Sources & Evidence Accordion */}
         {hasSources && (

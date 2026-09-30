@@ -13,36 +13,57 @@ export const setToastHandler = (handler) => {
  * Extracts a human-friendly error message from a raw error response message,
  * especially handling stringified Google GenAI/Gemini quota errors.
  */
-const getCleanErrorMessage = (msg) => {
+export const getCleanErrorMessage = (msg) => {
   if (!msg) return "Something went wrong";
 
-  if (typeof msg === "string" && msg.trim().startsWith("{")) {
+  if (typeof msg !== "string") {
+    if (typeof msg === "object" && msg.message) {
+      return getCleanErrorMessage(msg.message);
+    }
+    return "An error occurred";
+  }
+
+  const trimmed = msg.trim();
+
+  // Find any JSON block in the string (handles "ApiError: { ... }")
+  const jsonStart = trimmed.indexOf("{");
+  if (jsonStart !== -1) {
     try {
-      const parsed = JSON.parse(msg);
+      const jsonStr = trimmed.slice(jsonStart);
+      const parsed = JSON.parse(jsonStr);
+
       if (parsed.error?.message) {
-        const cleanMsg = parsed.error.message;
+        const innerMsg = parsed.error.message;
 
-        // Check if it's a Rate Limit / Resource Exhausted error
         if (parsed.error.status === "RESOURCE_EXHAUSTED" || parsed.error.code === 429) {
-          const retryMatch = cleanMsg.match(/Please retry in (\d+(\.\d+)?s)/i);
-          const seconds = retryMatch ? Math.round(parseFloat(retryMatch[1])) : null;
-
-          const baseMsg = "Gemini API quota exceeded.";
-          if (seconds) {
-            return `${baseMsg} Please retry in ${seconds}s.`;
-          }
-          return baseMsg;
+          const retryMatch = innerMsg.match(/Please retry in ([\d\.]+\w*)/i);
+          const retryStr = retryMatch ? ` Please retry in ${retryMatch[1]}.` : "";
+          return `Gemini quota exceeded.${retryStr}`;
         }
 
-        // Default cleanup (remove URL details to keep toaster clean)
-        return cleanMsg.replace(/For more information.*$/gi, "").trim();
+        // Clean up URL footnotes
+        const cleaned = innerMsg.replace(/For more information.*$/gi, "").trim();
+        return cleaned.length > 90 ? cleaned.slice(0, 90) + "..." : cleaned;
       }
     } catch (e) {
-      // Fail silent, return raw message if parsing fails
+      // Ignore JSON parse errors
     }
   }
 
-  return msg;
+  // Keywords check for 429 / quota
+  if (trimmed.includes("429") || trimmed.includes("RESOURCE_EXHAUSTED") || trimmed.includes("quota")) {
+    const retryMatch = trimmed.match(/Please retry in ([\d\.]+\w*)/i);
+    const retryStr = retryMatch ? ` Please retry in ${retryMatch[1]}.` : "";
+    return `AI quota limit exceeded.${retryStr}`;
+  }
+
+  // General cleanup
+  const clean = trimmed
+    .replace(/^ApiError:\s*/i, "")
+    .replace(/^Error:\s*/i, "")
+    .trim();
+
+  return clean.length > 100 ? clean.slice(0, 100) + "..." : clean;
 };
 
 const showToast = (type, message, options = {}) => {

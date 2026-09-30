@@ -73,3 +73,186 @@ export const ingestKnowledgeDocumentApi = async (docData) => {
   }
 };
 
+/**
+ * List all saved AI conversations for the user from MongoDB
+ */
+export const getAiConversationsApi = async () => {
+  try {
+    const url = endpoints?.ai?.conversations || "/ai/conversations";
+    const response = await axiosInstance.get(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Fetch a single AI conversation by ID with full messages history
+ */
+export const getAiConversationByIdApi = async (id) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.conversationById === "function"
+        ? endpoints.ai.conversationById(id)
+        : `/ai/conversations/${id}`;
+    const response = await axiosInstance.get(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Create a new AI conversation session in MongoDB
+ */
+export const createAiConversationApi = async (data = {}) => {
+  try {
+    const url = endpoints?.ai?.conversations || "/ai/conversations";
+    const response = await axiosInstance.post(url, data);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Send user message to conversation: executes AI/RAG, recalls memory, and persists turns
+ */
+export const sendMessageToAiConversationApi = async (id, { prompt, isRag = true, category, useMemory = true }) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.conversationMessages === "function"
+        ? endpoints.ai.conversationMessages(id)
+        : `/ai/conversations/${id}/messages`;
+    const response = await axiosInstance.post(url, {
+      prompt,
+      isRag,
+      category,
+      useMemory,
+    });
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Update conversation (rename title or toggle pinned)
+ */
+export const updateAiConversationApi = async (id, data) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.conversationById === "function"
+        ? endpoints.ai.conversationById(id)
+        : `/ai/conversations/${id}`;
+    const response = await axiosInstance.patch(url, data);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Delete a specific AI conversation from MongoDB
+ */
+export const deleteAiConversationApi = async (id) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.conversationById === "function"
+        ? endpoints.ai.conversationById(id)
+        : `/ai/conversations/${id}`;
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Delete all AI conversations for the logged-in user
+ */
+export const clearAllAiConversationsApi = async () => {
+  try {
+    const url = endpoints?.ai?.conversations || "/ai/conversations";
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+// ==================== Sprint 19: AI Memory Management APIs ====================
+
+/**
+ * Fetch all stored memories & tactical preferences for the logged-in user
+ */
+export const getUserMemoriesApi = async (params = {}) => {
+  try {
+    const url = endpoints?.ai?.memories || "/ai/memories";
+    const response = await axiosInstance.get(url, { params });
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Manually add a user memory / tactical preference
+ */
+export const createUserMemoryApi = async (data) => {
+  try {
+    const url = endpoints?.ai?.memories || "/ai/memories";
+    const response = await axiosInstance.post(url, data);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Update a memory fact or status
+ */
+export const updateUserMemoryApi = async (id, data) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.memoryById === "function"
+        ? endpoints.ai.memoryById(id)
+        : `/ai/memories/${id}`;
+    const response = await axiosInstance.patch(url, data);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Delete a specific memory item
+ */
+export const deleteUserMemoryApi = async (id) => {
+  try {
+    const url =
+      typeof endpoints?.ai?.memoryById === "function"
+        ? endpoints.ai.memoryById(id)
+        : `/ai/memories/${id}`;
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Wipe all memories and vector points for the logged-in user
+ */
+export const clearAllUserMemoriesApi = async () => {
+  try {
+    const url = endpoints?.ai?.memories || "/ai/memories";
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+
+
