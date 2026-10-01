@@ -64,6 +64,11 @@ const endpoints = {
     markAllRead: "/notifications/read-all",
     generate: "/notifications/generate",
   },
+  scout: {
+    report: "/ai/scout/report",
+    similar: "/ai/scout/similar",
+    tacticalFit: "/ai/scout/tactical-fit",
+  },
 };
 
 export default endpoints;
