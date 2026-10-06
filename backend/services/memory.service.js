@@ -130,17 +130,12 @@ async function recallUserContext(userId, currentPrompt, options = {}) {
         .join("\n\n");
     }
 
-    const duration = Date.now() - startTime;
-    logger.info(
-      `[MemoryService] Context recall completed in ${duration}ms (Facts: ${factLines.length}, Episodics: ${episodicLines.length})`
-    );
-
     return {
       memoryPromptBlock,
       recalledMemories,
     };
   } catch (error) {
-    logger.error(`[MemoryService] Error during recallUserContext: ${error.message}`, error);
+    logger.warn(`[MemoryService] Recall context notice: ${error.message}`);
     return { memoryPromptBlock: "", recalledMemories: [] };
   }
 }

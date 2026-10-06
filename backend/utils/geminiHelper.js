@@ -1,15 +1,14 @@
 const logger = require("../config/logger");
 
-const DEFAULT_PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const DEFAULT_PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 const DEFAULT_LITE_MODEL = process.env.GEMINI_LITE_MODEL || "gemini-2.5-flash-lite";
 
 // Primary and alternative fallback models
 const FALLBACK_CHAIN = [
   DEFAULT_PRIMARY_MODEL,
-  "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
 ];
 
 /**

@@ -21,6 +21,9 @@
     "zod": "^4.4.3"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "check": "eslint .",
+    "test": "eslint ."
   }
 }

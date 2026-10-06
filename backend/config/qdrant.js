@@ -27,14 +27,13 @@ async function ensureQdrantCollection(collectionName = DEFAULT_COLLECTION, vecto
     const existing = collectionsResponse.collections?.some((col) => col.name === collectionName);
 
     if (!existing) {
-      logger.info(`[QdrantConfig] Creating collection '${collectionName}' (dim: ${vectorSize}, distance: Cosine)...`);
+      logger.info(`[Qdrant] Creating collection '${collectionName}' (dim: ${vectorSize})...`);
       await qdrantClient.createCollection(collectionName, {
         vectors: {
           size: vectorSize,
           distance: "Cosine",
         },
       });
-      logger.info(`[QdrantConfig] Successfully created Qdrant collection '${collectionName}'.`);
 
       // Create payload indexes if memory collection
       if (collectionName === FACTS_MEMORY_COLLECTION || collectionName === EPISODIC_MEMORY_COLLECTION) {
@@ -43,18 +42,15 @@ async function ensureQdrantCollection(collectionName = DEFAULT_COLLECTION, vecto
             field_name: "userId",
             field_schema: "keyword",
           });
-          logger.info(`[QdrantConfig] Created 'userId' keyword payload index on '${collectionName}'.`);
         } catch (idxErr) {
-          logger.warn(`[QdrantConfig] Payload index creation skipped/failed on '${collectionName}': ${idxErr.message}`);
+          // Payload index creation can be skipped silently if existing
         }
       }
-    } else {
-      logger.info(`[QdrantConfig] Qdrant collection '${collectionName}' is ready.`);
     }
 
     return true;
   } catch (error) {
-    logger.warn(`[QdrantConfig] Qdrant connection/collection check failed for '${collectionName}': ${error.message}`);
+    logger.warn(`[Qdrant] Connection/collection check failed for '${collectionName}': ${error.message}`);
     return false;
   }
 }
@@ -63,9 +59,15 @@ async function ensureQdrantCollection(collectionName = DEFAULT_COLLECTION, vecto
  * Initializes all required knowledge and memory collections.
  */
 async function initAllQdrantCollections() {
-  await ensureQdrantCollection(DEFAULT_COLLECTION);
-  await ensureQdrantCollection(FACTS_MEMORY_COLLECTION);
-  await ensureQdrantCollection(EPISODIC_MEMORY_COLLECTION);
+  try {
+    await Promise.all([
+      ensureQdrantCollection(DEFAULT_COLLECTION),
+      ensureQdrantCollection(FACTS_MEMORY_COLLECTION),
+      ensureQdrantCollection(EPISODIC_MEMORY_COLLECTION),
+    ]);
+  } catch (err) {
+    logger.warn(`[Qdrant] Collection initialization warning: ${err.message}`);
+  }
 }
 
 module.exports = {

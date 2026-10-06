@@ -52,16 +52,13 @@ async function generateEmbedding(text) {
         }
       } catch (error) {
         lastError = error;
-        logger.warn(
-          `[EmbeddingService] Model '${modelName}' attempt ${attempt} failed: ${error.message}`,
-        );
         // Brief pause before retry
-        await new Promise((r) => setTimeout(r, 400 * attempt));
+        await new Promise((r) => setTimeout(r, 200 * attempt));
       }
     }
   }
 
-  logger.error(
+  logger.warn(
     `[EmbeddingService] All embedding models failed: ${lastError?.message}`,
   );
   return [];
@@ -91,7 +88,7 @@ async function generateBatchEmbeddings(textArray) {
   try {
     // Gemini embedContent accepts array of strings in contents for batching
     const response = await aiClient.models.embedContent({
-      model: EMBEDDING_MODEL,
+      model: EMBEDDING_MODELS[0] || "text-embedding-004",
       contents: validTexts,
       config: {
         outputDimensionality: EMBEDDING_DIMENSION,
@@ -105,9 +102,6 @@ async function generateBatchEmbeddings(textArray) {
     // Fallback if batch format differs
     return await Promise.all(validTexts.map((t) => generateEmbedding(t)));
   } catch (error) {
-    logger.warn(
-      `[EmbeddingService] Batch embedContent failed, falling back to sequential: ${error.message}`,
-    );
     const results = [];
     for (const t of validTexts) {
       results.push(await generateEmbedding(t));

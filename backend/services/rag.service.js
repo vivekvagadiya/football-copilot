@@ -259,15 +259,10 @@ async function retrieveContext(query, options = {}) {
         });
 
         if (qdrantResults && qdrantResults.length > 0) {
-          logger.info(
-            `[RAG] Qdrant Vector DB retrieved ${qdrantResults.length} chunks (top score: ${qdrantResults[0]?.score?.toFixed(3) || 0})`
-          );
           return qdrantResults;
         }
       } catch (qdrantErr) {
-        logger.warn(
-          `[RAG] Qdrant Vector DB search unavailable (${qdrantErr.message}). Falling back to MongoDB/In-Memory search.`
-        );
+        // Fallback to MongoDB/In-Memory search silently if Qdrant is unavailable
       }
 
       // 3. Secondary Fallback: MongoDB Atlas Vector Search
@@ -304,15 +299,10 @@ async function retrieveContext(query, options = {}) {
 
         const atlasResults = await KnowledgeChunk.aggregate(pipeline);
         if (atlasResults && atlasResults.length > 0) {
-          logger.info(
-            `[RAG] Atlas $vectorSearch retrieved ${atlasResults.length} chunks (top score: ${atlasResults[0]?.score?.toFixed(3) || 0})`
-          );
           return atlasResults;
         }
       } catch (atlasErr) {
-        logger.warn(
-          `[RAG] Atlas $vectorSearch unavailable (${atlasErr.message}). Falling back to in-memory/keyword search.`
-        );
+        // Fallback to in-memory search
       }
 
       // 3. Fallback: In-memory cosine similarity over KnowledgeChunk records
@@ -350,11 +340,7 @@ async function retrieveContext(query, options = {}) {
 
           if (scored.length > 0) {
             scored.sort((a, b) => b.score - a.score);
-            const topChunks = scored.slice(0, topK);
-            logger.info(
-              `[RAG] In-memory cosine similarity retrieved ${topChunks.length} chunks (top score: ${topChunks[0]?.score?.toFixed(3)})`
-            );
-            return topChunks;
+            return scored.slice(0, topK);
           }
         }
       } catch (memErr) {
