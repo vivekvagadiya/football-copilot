@@ -47,6 +47,10 @@ router.get(
   footballController.getMatchSummaryController,
 );
 router.get(
+  "/matches/:id/ai-timeline",
+  footballController.getMatchAiTimelineController,
+);
+router.get(
   "/competitions",
   cacheMiddleware(900),
   footballController.getCompetationController,

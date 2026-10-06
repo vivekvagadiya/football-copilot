@@ -18,6 +18,10 @@ const matchSummarySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    aiTimeline: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     lastUpdated: {
       type: Date,
       default: Date.now,

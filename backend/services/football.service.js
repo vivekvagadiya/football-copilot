@@ -534,6 +534,60 @@ const getMatchSummary = async (matchId) => {
   return cachedSummary;
 };
 
+const getMatchAiTimeline = async (matchId) => {
+  let cachedSummary = await MatchSummary.findOne({ matchId });
+  const now = new Date();
+
+  // If match finished and timeline exists, return immediately from cache
+  if (
+    cachedSummary &&
+    cachedSummary.status === "FINISHED" &&
+    cachedSummary.aiTimeline
+  ) {
+    return cachedSummary.aiTimeline;
+  }
+
+  const isStale =
+    !cachedSummary ||
+    !cachedSummary.aiTimeline ||
+    cachedSummary.status === "LIVE" ||
+    (now - new Date(cachedSummary.lastUpdated)) / 1000 > 60;
+
+  if (isStale) {
+    try {
+      const matchDetails = await getMatchDetails(matchId);
+      if (matchDetails) {
+        const aiService = require("./ai.service");
+        const timelineData =
+          await aiService.generateMatchAiTimelineResponse(matchDetails);
+
+        if (!cachedSummary) {
+          cachedSummary = new MatchSummary({
+            matchId,
+            status: matchDetails.status,
+            aiTimeline: timelineData,
+            lastUpdated: now,
+          });
+        } else {
+          cachedSummary.status = matchDetails.status;
+          cachedSummary.aiTimeline = timelineData;
+          cachedSummary.lastUpdated = now;
+        }
+        await cachedSummary.save();
+        return timelineData;
+      }
+    } catch (err) {
+      console.error(
+        `Error generating or saving AI Match Timeline for ID ${matchId}:`,
+        err,
+      );
+    }
+  }
+
+  return cachedSummary?.aiTimeline || null;
+};
+
+
 const getCompetation = async () => {
   try {
     const competitionCodes = ["PL", "PD", "BL1", "FL1", "SA", "CL"];
@@ -921,6 +975,7 @@ module.exports = {
   getPlayerDetails,
   getTeamDetails,
   getMatchSummary,
+  getMatchAiTimeline,
   searchPlayers,
   searchLeagues,
   searchTeams,

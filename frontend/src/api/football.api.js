@@ -119,6 +119,15 @@ export const getMatchAiSummaryApi = async (matchId) => {
   }
 };
 
+export const getMatchAiTimelineApi = async (matchId) => {
+  try {
+    const response = await axiosInstance.get(`/football/matches/${matchId}/ai-timeline`);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
 export const getTopTransfersApi = async (page = 1) => {
   try {
     const response = await axiosInstance.get("/football/transfers/top", {
