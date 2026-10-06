@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Cpu } from "lucide-react";
 import { TRANSFERS } from "../../constants/mockData";
-import { Loading } from "../../components/ui/Loading";
 import { Drawer } from "../../components/ui/Drawer";
 import { AIResponseCard } from "../../components/ai/AIResponseCard";
 import {
@@ -15,7 +14,6 @@ import {
 import { getAiRecommendationsApi, getDailyBriefingApi } from "../../api/ai.api";
 
 // Sub-components
-import { DashboardBriefing } from "../../components/dashboard/DashboardBriefing";
 import { DailyBriefingCard } from "../../components/dashboard/DailyBriefingCard";
 import { DashboardAiRecommendations } from "../../components/dashboard/DashboardAiRecommendations";
 import { DashboardLiveMatches } from "../../components/dashboard/DashboardLiveMatches";
@@ -31,7 +29,7 @@ export const Dashboard = () => {
   // Fetch live matches - poll every 30s
   const { data: liveMatches = [], isLoading: loadingLive } = useQuery({
     queryKey: ["liveMatches"],
-    queryFn: getLiveMatchesApi,
+    queryFn: () => getLiveMatchesApi(),
     refetchInterval: 30000,
     staleTime: 10000,
   });
@@ -40,11 +38,11 @@ export const Dashboard = () => {
   const { data: upcomingMatchesRaw = [], isLoading: loadingUpcoming } =
     useQuery({
       queryKey: ["upcomingMatches", "SCHEDULED"],
-      queryFn: () => getUpcomingMatchesApi({ status: "SCHEDULED" }),
+      queryFn: () => getUpcomingMatchesApi({ status: "SCHEDULED", limit: 5 }),
       staleTime: 600000,
     });
 
-  const upcomingMatches = upcomingMatchesRaw.slice(0, 10);
+  const upcomingMatches = upcomingMatchesRaw.slice(0, 5);
 
   // Fetch news using news API
   const { data: news = [], isLoading: loadingNews } = useQuery({
@@ -71,36 +69,42 @@ export const Dashboard = () => {
   // Fetch AI recommendations - cache for 10 minutes
   const { data: recommendations } = useQuery({
     queryKey: ["aiRecommendations"],
-    queryFn: getAiRecommendationsApi,
+    queryFn: () => getAiRecommendationsApi(),
     staleTime: 600000,
   });
 
   // Fetch AI Daily Briefing - cache for 30 minutes
   const { data: dailyBriefing, isLoading: loadingBriefing } = useQuery({
     queryKey: ["aiDailyBriefing"],
-    queryFn: getDailyBriefingApi,
+    queryFn: () => getDailyBriefingApi(),
     staleTime: 30 * 60 * 1000,
   });
-
-  const isLoading =
-    loadingLive || loadingUpcoming || loadingNews || loadingTransfers;
-
-  if (isLoading) {
-    return <Loading text="Assembling tactical widgets..." />;
-  }
 
   return (
     <div className="space-y-6">
       {/* AI Intelligence Daily Briefing Bento Card */}
-      <DailyBriefingCard briefingData={dailyBriefing} isLoading={loadingBriefing} />
+      <DailyBriefingCard
+        briefingData={dailyBriefing}
+        isLoading={loadingBriefing}
+      />
 
       {/* Grid Layout of widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Live, Fixtures, News) */}
         <div className="lg:col-span-2 space-y-6">
-          <DashboardLiveMatches liveMatches={liveMatches} />
-          <DashboardUpcomingMatches upcomingMatches={upcomingMatches} />
-          <DashboardNews news={news} onSelectNews={setSelectedNews} />
+          <DashboardLiveMatches
+            liveMatches={liveMatches}
+            isLoading={loadingLive}
+          />
+          <DashboardUpcomingMatches
+            upcomingMatches={upcomingMatches}
+            isLoading={loadingUpcoming}
+          />
+          <DashboardNews
+            news={news}
+            onSelectNews={setSelectedNews}
+            isLoading={loadingNews}
+          />
           <DashboardAiRecommendations
             recommendations={recommendations}
             liveMatches={liveMatches}
@@ -112,7 +116,10 @@ export const Dashboard = () => {
         <div className="space-y-6">
           <DashboardStandings />
           <DashboardLeaderboard />
-          <DashboardTransfers transfers={transfers} />
+          <DashboardTransfers
+            transfers={transfers}
+            isLoading={loadingTransfers}
+          />
         </div>
       </div>
 

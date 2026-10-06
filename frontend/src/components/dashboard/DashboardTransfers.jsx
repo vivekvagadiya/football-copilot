@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRightLeft, ArrowRight } from "lucide-react";
 import { TransferCard } from "../football/TransferCard";
 
-export const DashboardTransfers = ({ transfers = [] }) => {
+export const DashboardTransfers = ({ transfers = [], isLoading = false }) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2.5">
@@ -17,11 +17,22 @@ export const DashboardTransfers = ({ transfers = [] }) => {
           All transfers <ArrowRight size={12} />
         </Link>
       </div>
-      <div className="space-y-3">
-        {transfers.slice(0, 2).map((t) => (
-          <TransferCard key={t.id} transfer={t} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-20 rounded-xl bg-card/60 border border-border/40 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {transfers.slice(0, 2).map((t) => (
+            <TransferCard key={t.id} transfer={t} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

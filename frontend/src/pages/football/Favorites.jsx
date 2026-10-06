@@ -14,7 +14,7 @@ export const Favorites = () => {
   // Fetch full user favorites list from backend (cached via Redis)
   const { data: resData, isLoading, refetch } = useQuery({
     queryKey: ["user-favorites"],
-    queryFn: getFavoritesApi,
+    queryFn: () => getFavoritesApi(),
     staleTime: 300000,
   });
 

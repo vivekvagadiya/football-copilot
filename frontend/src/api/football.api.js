@@ -1,9 +1,22 @@
 import axiosInstance from "./axios";
 
-export const getLiveMatchesApi = async (params) => {
+// Helper to safely strip React Query internal context objects (queryKey, client, signal, meta) from query params
+const sanitizeQueryParams = (params) => {
+  if (!params || typeof params !== "object") return { params: undefined, signal: undefined };
+  if ("queryKey" in params || "client" in params || (params.signal && typeof params.signal === "object")) {
+    const { queryKey, client, meta, signal, pageParam, ...rest } = params;
+    const cleanParams = Object.keys(rest).length > 0 ? rest : undefined;
+    return { params: cleanParams, signal };
+  }
+  return { params, signal: params?.signal };
+};
+
+export const getLiveMatchesApi = async (rawParams) => {
   try {
+    const { params, signal } = sanitizeQueryParams(rawParams);
     const response = await axiosInstance.get("/football/matches/live", {
       params,
+      signal,
     });
     return response?.data?.data || [];
   } catch (error) {
@@ -11,10 +24,12 @@ export const getLiveMatchesApi = async (params) => {
   }
 };
 
-export const getUpcomingMatchesApi = async (params) => {
+export const getUpcomingMatchesApi = async (rawParams) => {
   try {
+    const { params, signal } = sanitizeQueryParams(rawParams);
     const response = await axiosInstance.get("/football/matches/upcoming", {
       params,
+      signal,
     });
     return response?.data?.data || [];
   } catch (error) {

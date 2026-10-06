@@ -100,9 +100,7 @@ const mapMatch = (match) => {
   let awayXG = null;
   if (!isUpcoming && homeScore !== null && awayScore !== null) {
     const idSeed =
-      typeof match.id === "number"
-        ? match.id
-        : parseInt(match.id, 10) || 1;
+      typeof match.id === "number" ? match.id : parseInt(match.id, 10) || 1;
     homeXG = parseFloat(
       (homeScore * 0.8 + 0.4 + (idSeed % 5) * 0.1).toFixed(2),
     );
@@ -220,8 +218,7 @@ const getLiveMatches = async (
     if (dFrom) params.dateFrom = dFrom;
     if (dTo) params.dateTo = dTo;
 
-    const compFilter =
-      lId || comp || DEFAULT_COMPETITIONS.join(",");
+    const compFilter = lId || comp || DEFAULT_COMPETITIONS.join(",");
     if (compFilter && compFilter !== "all") {
       params.competitions = compFilter;
     }
@@ -230,7 +227,10 @@ const getLiveMatches = async (
     const parsedOffset = off ? parseInt(off, 10) : 0;
     params.limit = 100;
 
-    console.log("Calling footballApi.get('/matches') for LIVE with params:", params);
+    console.log(
+      "Calling footballApi.get('/matches') for LIVE with params:",
+      params,
+    );
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
     console.log("live matches fetched:", rawMatches.length);
@@ -318,8 +318,8 @@ const upcomingMatches = async (
 
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
     const parsedOffset = offset ? parseInt(offset, 10) : 0;
-    params.limit = 100;
-
+    params.limit = parsedLimit;
+    params.offset = parsedOffset;
     console.log("Calling footballApi.get('/matches') with params:", params);
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
@@ -396,12 +396,31 @@ const playerLeaderboard = async (competition = "PL", season, limit = 20) => {
 };
 
 const getDashboardData = async (query = {}) => {
-  const { dateFrom, dateTo, league, season, competitions, limit, offset, status, leagueId, days } =
-    query;
+  const {
+    dateFrom,
+    dateTo,
+    league,
+    season,
+    competitions,
+    limit,
+    offset,
+    status,
+    leagueId,
+    days,
+  } = query;
   const [matchesRes, standingsRes, upcomingRes, playerRes] = await Promise.all([
     getLiveMatches(),
     getStanding(league || "PL", season),
-    upcomingMatches(dateFrom, dateTo, competitions, limit, offset, status, leagueId, days),
+    upcomingMatches(
+      dateFrom,
+      dateTo,
+      competitions,
+      limit,
+      offset,
+      status,
+      leagueId,
+      days,
+    ),
     playerLeaderboard(league || "PL", season),
   ]);
   return {
@@ -586,7 +605,6 @@ const getMatchAiTimeline = async (matchId) => {
 
   return cachedSummary?.aiTimeline || null;
 };
-
 
 const getCompetation = async () => {
   try {

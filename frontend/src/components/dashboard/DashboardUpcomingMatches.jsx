@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import { Calendar, ArrowRight } from "lucide-react";
 import { FixtureCard } from "../football/FixtureCard";
 
-export const DashboardUpcomingMatches = ({ upcomingMatches = [] }) => {
+export const DashboardUpcomingMatches = ({
+  upcomingMatches = [],
+  isLoading = false,
+}) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
@@ -17,11 +20,22 @@ export const DashboardUpcomingMatches = ({ upcomingMatches = [] }) => {
           View Fixtures <ArrowRight size={12} />
         </Link>
       </div>
-      <div className="space-y-3">
-        {upcomingMatches.map((m) => (
-          <FixtureCard key={m.id} match={m} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-16 rounded-xl bg-card/60 border border-border/40 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {upcomingMatches.map((m) => (
+            <FixtureCard key={m.id} match={m} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

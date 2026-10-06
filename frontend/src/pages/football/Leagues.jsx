@@ -16,7 +16,7 @@ export const Leagues = () => {
 
   const { data: leagues = [], isLoading } = useQuery({
     queryKey: ["leagues"],
-    queryFn: getCompetationApi,
+    queryFn: () => getCompetationApi(),
     staleTime: 600000, // Caches data for 10 minutes to prevent duplicate API fetches during re-renders
   });
 
