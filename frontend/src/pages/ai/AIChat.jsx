@@ -52,8 +52,8 @@ export const AIChat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
 
-  // RAG Mode and Knowledge Base States
-  const [isRagMode, setIsRagMode] = useState(true);
+  // RAG Mode and Knowledge Base States (Default: OFF)
+  const [isRagMode, setIsRagMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isKnowledgeDrawerOpen, setIsKnowledgeDrawerOpen] = useState(false);
   const [knowledgeDocCount, setKnowledgeDocCount] = useState(0);
@@ -825,6 +825,20 @@ export const AIChat = () => {
 
             <div className="flex items-center justify-between px-2 pt-1 border-t border-border/20">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRagMode(!isRagMode)}
+                  className={`text-[9px] px-2 py-0.5 rounded-full font-bold transition-all border flex items-center gap-1 cursor-pointer ${
+                    isRagMode
+                      ? 'bg-primary/15 border-primary/40 text-primary'
+                      : 'bg-card border-border/60 text-muted hover:text-text'
+                  }`}
+                  title="Toggle Knowledge Base RAG Grounding"
+                >
+                  <Database size={9} />
+                  <span>RAG: {isRagMode ? 'ON' : 'OFF'}</span>
+                </button>
+
                 <span className="text-[9px] text-muted font-mono select-none">
                   {input.length} / 1000
                 </span>

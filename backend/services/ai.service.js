@@ -695,13 +695,120 @@ You must return a strictly valid JSON object matching this schema:
   }
 };
 
+/**
+ * Generate structured AI Daily Briefing / Morning Football Digest using Gemini AI
+ * @param {Array} favorites - User favorites list
+ * @param {Array} matches - Live/upcoming/recent matches
+ * @param {Array} news - Recent trending news
+ * @returns {Promise<Object>} Structured daily briefing digest
+ */
+const generateDailyBriefingResponse = async (favorites, matches, news) => {
+  const todayStr = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+
+  const fallbackData = {
+    date: todayStr,
+    greeting: "Good Day! Here is your 60-second Football Copilot digest.",
+    headline: "High-stakes European matchday unfolds with critical title and top-4 positioning on the line.",
+    keyResults: [
+      { match: "Recent League Action", highlight: "Fast-paced fixtures with tactical pressing duels shaping league standings." }
+    ],
+    todayPicks: matches.slice(0, 3).map((m) => ({
+      match: `${m.homeTeam} vs ${m.awayTeam}`,
+      league: m.leagueName || "League",
+      time: m.minute ? `LIVE ${m.minute}'` : (m.date ? new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Today"),
+      whyWatch: "Key tactical clash with significant points at stake.",
+      excitementScore: 8
+    })),
+    topIntel: news.slice(0, 3).map((n) => ({
+      tag: "INTEL",
+      text: n.title || "Squad tactics and transfer maneuvers continue across top clubs."
+    })),
+    statOfTheDay: "Teams utilizing high transition press have generated 28% more expected goals from counter-attacks this season.",
+    suggestedPrompt: "What are the most impactful tactical matchups to watch today?"
+  };
+
+  if (!aiClient) {
+    return fallbackData;
+  }
+
+  const prompt = `Generate an elite, personalized 60-second AI Daily Football Briefing for today (${todayStr}).
+
+User Favorites:
+${JSON.stringify(favorites, null, 2)}
+
+Today's Matches (Live & Upcoming):
+${JSON.stringify(matches.slice(0, 10), null, 2)}
+
+Trending News & Intel:
+${JSON.stringify(news.slice(0, 8), null, 2)}
+
+You must return a strictly valid JSON object matching this schema:
+{
+  "date": "${todayStr}",
+  "greeting": "Punchy, personalized morning greeting (e.g., 'Good Morning! Here is your 60-second Football Copilot digest.')",
+  "headline": "A bold 1-2 sentence overarching story connecting today's top fixtures and user favorite teams.",
+  "keyResults": [
+    { "match": "Team A vs Team B", "highlight": "1 punchy sentence summarizing recent action or result." }
+  ],
+  "todayPicks": [
+    {
+      "match": "Team A vs Team B",
+      "league": "League Name",
+      "time": "Kickoff time string or 'LIVE'",
+      "whyWatch": "1 sentence tactical reason why this is a must-watch game.",
+      "excitementScore": 9 (Integer 1-10)
+    }
+  ],
+  "topIntel": [
+    {
+      "tag": "TRANSFER or INJURY or TACTICAL or STAT",
+      "text": "1 sentence concise intelligence piece."
+    }
+  ],
+  "statOfTheDay": "1 surprising, verified or realistic advanced football metric / stat.",
+  "suggestedPrompt": "A prompt string the user could ask Football Copilot regarding today's games"
+}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await generateContentWithFallback(aiClient, {
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction:
+          "You are the Editor-in-Chief and Chief Football Analyst of Football Copilot. You create personalized, hyper-engaging morning football briefings. Respond ONLY with valid JSON.",
+        temperature: 0.6,
+        responseMimeType: "application/json",
+      },
+    });
+
+    if (response && response.text) {
+      return JSON.parse(response.text);
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error("Error generating Gemini daily briefing:", error);
+    return fallbackData;
+  }
+};
+
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
   generateMatchAiTimelineResponse,
+  generateDailyBriefingResponse,
   generateNewsSummaryResponse,
   generateRecommendationsResponse,
   generateNotificationsResponse,
   footballTools,
 };
+
 

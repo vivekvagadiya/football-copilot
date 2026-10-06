@@ -37,6 +37,11 @@ const getRecommendations = asyncHandler(async (req, res) => {
   return apiResponse.success(res, "AI recommendations fetched successfully", data);
 });
 
+const getDailyBriefing = asyncHandler(async (req, res) => {
+  const data = await recommendationService.getDailyBriefingService(req.user._id);
+  return apiResponse.success(res, "AI daily briefing fetched successfully", data);
+});
+
 // ==================== Sprint 18: RAG Endpoints ====================
 
 const queryRAG = asyncHandler(async (req, res) => {
@@ -426,6 +431,7 @@ const clearAllUserMemories = asyncHandler(async (req, res) => {
 module.exports = {
   chat,
   getRecommendations,
+  getDailyBriefing,
   queryRAG,
   ingestDocument,
   listDocuments,

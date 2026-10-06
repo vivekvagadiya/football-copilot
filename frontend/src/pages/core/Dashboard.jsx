@@ -12,10 +12,11 @@ import {
   getNewsSummaryApi,
   getTopTransfersApi,
 } from "../../api/football.api";
-import { getAiRecommendationsApi } from "../../api/ai.api";
+import { getAiRecommendationsApi, getDailyBriefingApi } from "../../api/ai.api";
 
 // Sub-components
 import { DashboardBriefing } from "../../components/dashboard/DashboardBriefing";
+import { DailyBriefingCard } from "../../components/dashboard/DailyBriefingCard";
 import { DashboardAiRecommendations } from "../../components/dashboard/DashboardAiRecommendations";
 import { DashboardLiveMatches } from "../../components/dashboard/DashboardLiveMatches";
 import { DashboardUpcomingMatches } from "../../components/dashboard/DashboardUpcomingMatches";
@@ -74,6 +75,13 @@ export const Dashboard = () => {
     staleTime: 600000,
   });
 
+  // Fetch AI Daily Briefing - cache for 30 minutes
+  const { data: dailyBriefing, isLoading: loadingBriefing } = useQuery({
+    queryKey: ["aiDailyBriefing"],
+    queryFn: getDailyBriefingApi,
+    staleTime: 30 * 60 * 1000,
+  });
+
   const isLoading =
     loadingLive || loadingUpcoming || loadingNews || loadingTransfers;
 
@@ -83,8 +91,8 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* AI Intelligence Brief Banner */}
-      <DashboardBriefing briefing={recommendations?.briefing} />
+      {/* AI Intelligence Daily Briefing Bento Card */}
+      <DailyBriefingCard briefingData={dailyBriefing} isLoading={loadingBriefing} />
 
       {/* Grid Layout of widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
