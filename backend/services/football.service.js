@@ -290,8 +290,6 @@ const upcomingMatches = async (
   try {
     const today = new Date();
     const rangeDays = parseInt(days, 10) || 10;
-    const dateToObj = new Date(today);
-    dateToObj.setDate(today.getDate() + rangeDays);
 
     const formatDate = (date) => {
       const yyyy = date.getFullYear();
@@ -300,11 +298,35 @@ const upcomingMatches = async (
       return `${yyyy}-${mm}-${dd}`;
     };
 
+    let defaultDateFrom;
+    let defaultDateTo;
+
+    if (status === "FINISHED") {
+      // For finished matches, look back over recent days up to today
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - rangeDays);
+      defaultDateFrom = formatDate(pastDate);
+      defaultDateTo = formatDate(today);
+    } else if (status === "all" || !status) {
+      // For full calendar, include recent past (last 4 days) + upcoming (next 5 days) within API limits
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - 4);
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 5);
+      defaultDateFrom = formatDate(pastDate);
+      defaultDateTo = formatDate(futureDate);
+    } else {
+      // For scheduled/upcoming matches, look forward from today
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + rangeDays);
+      defaultDateFrom = formatDate(today);
+      defaultDateTo = formatDate(futureDate);
+    }
+
     const params = {
-      dateFrom: dateFrom || formatDate(today),
-      dateTo: dateTo || formatDate(dateToObj),
+      dateFrom: dateFrom || defaultDateFrom,
+      dateTo: dateTo || defaultDateTo,
     };
-    console.log("params", params);
 
     const compFilter =
       leagueId || competitions || DEFAULT_COMPETITIONS.join(",");

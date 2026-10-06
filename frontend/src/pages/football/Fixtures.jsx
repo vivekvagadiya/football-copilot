@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FixtureCard } from "../../components/football/FixtureCard";
-import { Loading } from "../../components/ui/Loading";
 import { Card } from "../../components/ui/Card";
-import { Badge } from "../../components/ui/Badge";
 import { CalendarRange, Filter } from "lucide-react";
 import { getUpcomingMatchesApi } from "../../api/football.api";
 import { LEAGUE_FILTERS } from "../../constants/leagues";
@@ -20,25 +18,20 @@ export const Fixtures = () => {
   const [isLeagueDropdownOpen, setIsLeagueDropdownOpen] = useState(false);
 
   const { data: matches = [], isLoading } = useQuery({
-    queryKey: ["matches"],
-    queryFn: () => getUpcomingMatchesApi(),
-    //   {
-    //   ...(statusFilter !== "all" && { status: statusFilter }),
-    //   ...(leagueFilter !== "all" && { leagueId: leagueFilter }),
-    // }
+    queryKey: ["matches", statusFilter, leagueFilter],
+    queryFn: () =>
+      getUpcomingMatchesApi({
+        ...(statusFilter !== "all" && { status: statusFilter }),
+        ...(leagueFilter !== "all" && { leagueId: leagueFilter }),
+      }),
+    staleTime: 60000,
   });
-
-
 
   const filteredMatches = matches.filter((m) => {
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
     const matchesLeague = leagueFilter === "all" || m.leagueId === leagueFilter;
     return matchesStatus && matchesLeague;
   });
-
-  if (isLoading) {
-    return <Loading text="Fetching match calendar..." />;
-  }
 
   return (
     <div className="space-y-6">
@@ -166,7 +159,25 @@ export const Fixtures = () => {
       </div>
 
       {/* Match Grid list */}
-      {filteredMatches.length > 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-24 rounded-xl bg-card/60 border border-border/40 p-4 animate-pulse flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-8 bg-border/40 rounded" />
+                <div className="space-y-2">
+                  <div className="w-32 h-4 bg-border/40 rounded" />
+                  <div className="w-28 h-4 bg-border/40 rounded" />
+                </div>
+              </div>
+              <div className="w-8 h-8 bg-border/40 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : filteredMatches.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredMatches.map((m) => (
             <FixtureCard key={m.id} match={m} />

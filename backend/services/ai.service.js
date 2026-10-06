@@ -377,7 +377,7 @@ ${JSON.stringify(matchData, null, 2)}`;
 
   try {
     const response = await generateContentWithFallback(aiClient, {
-      model: selectedMode,
+      model: selectedModel,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         systemInstruction:
