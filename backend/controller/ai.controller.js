@@ -496,6 +496,21 @@ const clearAllUserMemories = asyncHandler(async (req, res) => {
   });
 });
 
+// ==================== Sprint 20: AI Dynamic Chat Suggestions ====================
+const getChatSuggestions = asyncHandler(async (req, res) => {
+  const { category, limit } = req.query;
+  const suggestions = await ragService.getRandomSuggestions({
+    category,
+    limit: limit ? Number(limit) : 6,
+  });
+
+  return apiResponse.success(
+    res,
+    "AI chat suggestions fetched successfully",
+    suggestions
+  );
+});
+
 module.exports = {
   chat,
   getRecommendations,
@@ -506,6 +521,7 @@ module.exports = {
   getDocumentById,
   deleteDocument,
   getQdrantStatus,
+  getChatSuggestions,
   listConversations,
   getConversationById,
   createConversation,
@@ -519,3 +535,4 @@ module.exports = {
   deleteUserMemory,
   clearAllUserMemories,
 };
+

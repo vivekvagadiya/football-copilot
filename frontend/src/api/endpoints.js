@@ -36,6 +36,7 @@ const endpoints = {
     chat: "/ai/chat",
     recommendations: "/ai/recommendations",
     dailyBriefing: "/ai/daily-briefing",
+    suggestions: "/ai/suggestions",
     ragQuery: "/ai/rag/query",
     ragDocuments: "/ai/rag/documents",
     ragDocumentById: (id) => `/ai/rag/documents/${id}`,

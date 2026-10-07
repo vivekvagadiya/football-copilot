@@ -34,6 +34,19 @@ export const getDailyBriefingApi = async () => {
   }
 };
 
+export const getAiSuggestionsApi = async (params = {}) => {
+  try {
+    const response = await axiosInstance.get(endpoints.ai.suggestions, {
+      params,
+    });
+    return response?.data?.data || [];
+  } catch (error) {
+    console.warn("Failed to fetch dynamic suggestions from API, using fallback:", error);
+    return [];
+  }
+};
+
+
 export const sendRagQueryApi = async ({
   query,
   history = [],

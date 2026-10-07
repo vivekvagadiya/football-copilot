@@ -1,60 +1,78 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Send, Cpu, Trash2, ShieldAlert, Sparkles, CornerDownLeft,
-  RotateCcw, History, Plus, MessageSquareCode, BookOpen,
-  Database, Award, ShieldCheck, Filter, ChevronRight, Brain, Compass, Users2
-} from 'lucide-react';
-import { 
-  getAiConversationsApi, 
-  getAiConversationByIdApi, 
-  createAiConversationApi, 
-  sendMessageToAiConversationApi, 
-  deleteAiConversationApi, 
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Send,
+  Cpu,
+  Trash2,
+  ShieldAlert,
+  Sparkles,
+  CornerDownLeft,
+  RotateCcw,
+  RotateCw,
+  History,
+  Plus,
+  MessageSquareCode,
+  BookOpen,
+  Database,
+  Award,
+  ShieldCheck,
+  Filter,
+  ChevronRight,
+  Brain,
+  Compass,
+  Users2,
+} from "lucide-react";
+import {
+  getAiConversationsApi,
+  getAiConversationByIdApi,
+  createAiConversationApi,
+  sendMessageToAiConversationApi,
+  deleteAiConversationApi,
   clearAllAiConversationsApi,
   getKnowledgeDocumentsApi,
-  getUserMemoriesApi
-} from '../../api/ai.api';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { AIResponseCard } from '../../components/ai/AIResponseCard';
-import { KnowledgeBaseDrawer } from '../../components/ai/KnowledgeBaseDrawer';
-import { MemoryManagerDrawer } from '../../components/ai/MemoryManagerDrawer';
-import { useApp } from '../../context/AppContext';
-import { Drawer } from '../../components/ui/Drawer';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getCleanErrorMessage } from '../../api/axios';
+  getUserMemoriesApi,
+  getAiSuggestionsApi,
+} from "../../api/ai.api";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { AIResponseCard } from "../../components/ai/AIResponseCard";
+import { KnowledgeBaseDrawer } from "../../components/ai/KnowledgeBaseDrawer";
+import { MemoryManagerDrawer } from "../../components/ai/MemoryManagerDrawer";
+import { useApp } from "../../context/AppContext";
+import { Drawer } from "../../components/ui/Drawer";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getCleanErrorMessage } from "../../api/axios";
 
 // Keep track of processed prompt keys to prevent double-execution in StrictMode
 const processedPrompts = new Set();
 
 const RAG_CATEGORIES = [
-  { id: 'all', label: 'All Knowledge' },
-  { id: 'tactics', label: 'Tactics' },
-  { id: 'rules', label: 'Rules & IFAB' },
-  { id: 'scouting', label: 'Scouting & xG' },
-  { id: 'history', label: 'History' },
+  { id: "all", label: "All Knowledge" },
+  { id: "tactics", label: "Tactics" },
+  { id: "rules", label: "Rules & IFAB" },
+  { id: "scouting", label: "Scouting & xG" },
+  { id: "history", label: "History" },
 ];
 
 export const AIChat = () => {
   const { user } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
-  const userLetter = user?.username ? user.username[0].toUpperCase() : 'U';
+  const userLetter = user?.username ? user.username[0].toUpperCase() : "U";
 
   // MongoDB-backed conversation threads
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [loadingThreads, setLoadingThreads] = useState(true);
 
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
 
   // RAG Mode and Knowledge Base States (Default: OFF)
   const [isRagMode, setIsRagMode] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [isKnowledgeDrawerOpen, setIsKnowledgeDrawerOpen] = useState(false);
   const [knowledgeDocCount, setKnowledgeDocCount] = useState(0);
 
@@ -94,12 +112,12 @@ export const AIChat = () => {
           const detailRes = await getAiConversationByIdApi(firstId);
           if (detailRes?.data) {
             setThreads((prev) =>
-              prev.map((t) => (t._id === firstId ? detailRes.data : t))
+              prev.map((t) => (t._id === firstId ? detailRes.data : t)),
             );
           }
         }
       } catch (err) {
-        console.error('Failed to fetch AI conversations from MongoDB:', err);
+        console.error("Failed to fetch AI conversations from MongoDB:", err);
       } finally {
         setLoadingThreads(false);
       }
@@ -130,13 +148,13 @@ export const AIChat = () => {
 
   // Scroll bottom on message change or typing state
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [input]);
@@ -147,16 +165,20 @@ export const AIChat = () => {
     const existing = threads.find((t) => t._id === threadId);
 
     // If messages aren't populated yet, fetch them
-    if (!existing || !Array.isArray(existing.messages) || existing.messages.length <= 1) {
+    if (
+      !existing ||
+      !Array.isArray(existing.messages) ||
+      existing.messages.length <= 1
+    ) {
       try {
         const detailRes = await getAiConversationByIdApi(threadId);
         if (detailRes?.data) {
           setThreads((prev) =>
-            prev.map((t) => (t._id === threadId ? detailRes.data : t))
+            prev.map((t) => (t._id === threadId ? detailRes.data : t)),
           );
         }
       } catch (err) {
-        console.error('Error fetching thread messages:', err);
+        console.error("Error fetching thread messages:", err);
       }
     }
   };
@@ -165,7 +187,7 @@ export const AIChat = () => {
   const handleNewChat = async () => {
     try {
       const res = await createAiConversationApi({
-        title: 'New Session',
+        title: "New Session",
         category: selectedCategory,
       });
 
@@ -174,9 +196,9 @@ export const AIChat = () => {
         setThreads((prev) => [newConv, ...prev]);
         setActiveThreadId(newConv._id);
       }
-      setInput('');
+      setInput("");
     } catch (err) {
-      console.error('Failed to create new conversation in MongoDB:', err);
+      console.error("Failed to create new conversation in MongoDB:", err);
     }
   };
 
@@ -187,10 +209,10 @@ export const AIChat = () => {
     sources = [],
     chunks = [],
     isRag = false,
-    recalledMemories = []
+    recalledMemories = [],
   ) => {
-    let currentText = '';
-    const words = fullResponse.split(' ');
+    let currentText = "";
+    const words = fullResponse.split(" ");
     let wordIdx = 0;
 
     const tempId = `ai-${Date.now()}`;
@@ -203,8 +225,8 @@ export const AIChat = () => {
               ...(t.messages || []),
               {
                 _id: tempId,
-                sender: 'ai',
-                text: '',
+                sender: "ai",
+                text: "",
                 sources,
                 chunks,
                 isRag,
@@ -214,12 +236,12 @@ export const AIChat = () => {
           };
         }
         return t;
-      })
+      }),
     );
 
     const interval = setInterval(() => {
       if (wordIdx < words.length) {
-        currentText += (wordIdx === 0 ? '' : ' ') + words[wordIdx];
+        currentText += (wordIdx === 0 ? "" : " ") + words[wordIdx];
         setThreads((prev) =>
           prev.map((t) => {
             if (t._id === threadId) {
@@ -235,12 +257,12 @@ export const AIChat = () => {
                         isRag,
                         recalledMemories,
                       }
-                    : msg
+                    : msg,
                 ),
               };
             }
             return t;
-          })
+          }),
         );
         wordIdx++;
       } else {
@@ -257,16 +279,16 @@ export const AIChat = () => {
     if (!textToSend.trim() || isTyping) return;
 
     const currentInput = textToSend;
-    setInput('');
+    setInput("");
     setIsTyping(true);
 
     const targetIsRag = options.isRag !== undefined ? options.isRag : isRagMode;
     const targetCategory =
       options.category !== undefined
         ? options.category
-        : selectedCategory !== 'all'
-        ? selectedCategory
-        : undefined;
+        : selectedCategory !== "all"
+          ? selectedCategory
+          : undefined;
 
     // If card or action explicitly requested RAG mode, sync UI toggles
     if (options.isRag && !isRagMode) {
@@ -282,8 +304,12 @@ export const AIChat = () => {
     if (!currentThreadId) {
       try {
         const createRes = await createAiConversationApi({
-          title: currentInput.length > 28 ? currentInput.substring(0, 28) + '...' : currentInput,
-          category: targetCategory && targetCategory !== 'all' ? targetCategory : 'all',
+          title:
+            currentInput.length > 28
+              ? currentInput.substring(0, 28) + "..."
+              : currentInput,
+          category:
+            targetCategory && targetCategory !== "all" ? targetCategory : "all",
         });
         const createdConv = createRes?.data;
         if (createdConv) {
@@ -292,7 +318,7 @@ export const AIChat = () => {
           setThreads((prev) => [createdConv, ...prev]);
         }
       } catch (err) {
-        console.error('Error creating conversation:', err);
+        console.error("Error creating conversation:", err);
         setIsTyping(false);
         return;
       }
@@ -300,7 +326,7 @@ export const AIChat = () => {
 
     const optimisticUserMessage = {
       _id: `u-${Date.now()}`,
-      sender: 'user',
+      sender: "user",
       text: currentInput,
       createdAt: new Date().toISOString(),
     };
@@ -315,7 +341,7 @@ export const AIChat = () => {
           };
         }
         return t;
-      })
+      }),
     );
 
     try {
@@ -323,7 +349,10 @@ export const AIChat = () => {
       const res = await sendMessageToAiConversationApi(currentThreadId, {
         prompt: currentInput,
         isRag: targetIsRag,
-        category: targetCategory && targetCategory !== 'all' ? targetCategory : undefined,
+        category:
+          targetCategory && targetCategory !== "all"
+            ? targetCategory
+            : undefined,
         useMemory,
       });
 
@@ -332,7 +361,7 @@ export const AIChat = () => {
       // Update thread title in state if auto-generated on first turn
       if (title) {
         setThreads((prev) =>
-          prev.map((t) => (t._id === currentThreadId ? { ...t, title } : t))
+          prev.map((t) => (t._id === currentThreadId ? { ...t, title } : t)),
         );
       }
 
@@ -343,7 +372,7 @@ export const AIChat = () => {
           aiMessage.sources || [],
           aiMessage.chunks || [],
           aiMessage.isRag || targetIsRag,
-          aiMessage.recalledMemories || []
+          aiMessage.recalledMemories || [],
         );
       } else {
         setIsTyping(false);
@@ -353,7 +382,7 @@ export const AIChat = () => {
       const rawErrMsg =
         err?.response?.data?.message ||
         err?.message ||
-        'Could not connect to AI service.';
+        "Could not connect to AI service.";
       const cleanErrMsg = getCleanErrorMessage(rawErrMsg);
 
       setThreads((prev) =>
@@ -365,14 +394,14 @@ export const AIChat = () => {
                 ...(t.messages || []),
                 {
                   _id: `err-${Date.now()}`,
-                  sender: 'ai',
+                  sender: "ai",
                   text: `**Service Notice:** ${cleanErrMsg}`,
                 },
               ],
             };
           }
           return t;
-        })
+        }),
       );
     }
   };
@@ -380,7 +409,7 @@ export const AIChat = () => {
   // Handle initialPrompt from navigation state (e.g. AI Recommendations)
   useEffect(() => {
     const promptText = location.state?.initialPrompt;
-    const transitionKey = `${location.key || 'default'}-${promptText}`;
+    const transitionKey = `${location.key || "default"}-${promptText}`;
 
     if (promptText && !processedPrompts.has(transitionKey)) {
       processedPrompts.add(transitionKey);
@@ -396,7 +425,7 @@ export const AIChat = () => {
   }, [location.state, location.key, navigate]);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(input);
     }
@@ -416,7 +445,7 @@ export const AIChat = () => {
         return updated;
       });
     } catch (err) {
-      console.error('Failed to delete conversation from MongoDB:', err);
+      console.error("Failed to delete conversation from MongoDB:", err);
     }
   };
 
@@ -426,7 +455,7 @@ export const AIChat = () => {
       setThreads([]);
       setActiveThreadId(null);
     } catch (err) {
-      console.error('Failed to clear conversations from MongoDB:', err);
+      console.error("Failed to clear conversations from MongoDB:", err);
     }
   };
 
@@ -453,8 +482,13 @@ export const AIChat = () => {
           </div>
         ) : threads.length === 0 ? (
           <div className="text-center py-10 px-4 border border-dashed border-border/60 rounded-2xl bg-card/20">
-            <MessageSquareCode size={24} className="mx-auto text-muted/50 mb-2.5" />
-            <p className="text-[11px] font-semibold text-muted">No tactical archives.</p>
+            <MessageSquareCode
+              size={24}
+              className="mx-auto text-muted/50 mb-2.5"
+            />
+            <p className="text-[11px] font-semibold text-muted">
+              No tactical archives.
+            </p>
             <p className="text-[9px] text-muted/70 mt-1">
               Conversations will persist in your cloud database.
             </p>
@@ -468,18 +502,18 @@ export const AIChat = () => {
                 onClick={() => handleSelectThread(ch._id)}
                 className={`group w-full p-2.5 rounded-xl border flex items-center justify-between transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-primary/10 border-primary/40 text-text shadow-sm'
-                    : 'border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text'
+                    ? "bg-primary/10 border-primary/40 text-text shadow-sm"
+                    : "border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text"
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0 pr-1">
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'
+                      isActive ? "bg-primary animate-pulse" : "bg-muted/40"
                     }`}
                   />
                   <span className="text-xs font-semibold truncate leading-none">
-                    {ch.title || 'Untitled Session'}
+                    {ch.title || "Untitled Session"}
                   </span>
                 </div>
 
@@ -614,7 +648,7 @@ export const AIChat = () => {
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
                 <h2 className="text-xs font-bold text-text truncate">
-                  {activeThread ? activeThread.title : 'New Session'}
+                  {activeThread ? activeThread.title : "New Session"}
                 </h2>
               </div>
               <p className="text-[9px] text-muted tracking-wider uppercase font-semibold">
@@ -642,7 +676,7 @@ export const AIChat = () => {
             </Button>
 
             {/* Tactical Planner Agent link */}
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/planner')}
@@ -651,10 +685,10 @@ export const AIChat = () => {
             >
               <Compass size={11} className="text-primary animate-spin-slow" />
               <span>Planner</span>
-            </Button>
+            </Button> */}
 
             {/* Backroom Staff Multi-Agent Studio link */}
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/agents')}
@@ -663,7 +697,7 @@ export const AIChat = () => {
             >
               <Users2 size={11} className="text-primary" />
               <span>Staff</span>
-            </Button>
+            </Button> */}
 
             {/* Knowledge Base button in header for desktop */}
             <Button
@@ -683,7 +717,7 @@ export const AIChat = () => {
             </Button>
 
             <Button
-              variant={activeThreadId === null ? 'outline' : 'primary'}
+              variant={activeThreadId === null ? "outline" : "primary"}
               size="sm"
               onClick={handleNewChat}
               className="text-[10px] py-1 px-2.5 h-8 font-semibold flex items-center gap-1"
@@ -692,7 +726,9 @@ export const AIChat = () => {
             >
               <Plus
                 size={11}
-                className={activeThreadId === null ? 'text-text' : 'text-[#07120D]'}
+                className={
+                  activeThreadId === null ? "text-text" : "text-[#07120D]"
+                }
               />
               <span>New Chat</span>
             </Button>
@@ -707,17 +743,27 @@ export const AIChat = () => {
               onClick={() => setIsRagMode(!isRagMode)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
                 isRagMode
-                  ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
-                  : 'bg-card border-border/70 text-muted hover:text-text'
+                  ? "bg-primary/15 border-primary/40 text-primary shadow-sm"
+                  : "bg-card border-border/70 text-muted hover:text-text"
               }`}
-              title={isRagMode ? 'RAG Grounding is Active' : 'Click to activate Grounded RAG'}
+              title={
+                isRagMode
+                  ? "RAG Grounding is Active"
+                  : "Click to activate Grounded RAG"
+              }
             >
               <ShieldCheck
                 size={12}
-                className={isRagMode ? 'text-primary animate-pulse' : 'text-muted'}
+                className={
+                  isRagMode ? "text-primary animate-pulse" : "text-muted"
+                }
               />
-              <span>{isRagMode ? 'Grounded RAG Mode' : 'Standard AI Mode'}</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${isRagMode ? 'bg-primary' : 'bg-muted'}`} />
+              <span>
+                {isRagMode ? "Grounded RAG Mode" : "Standard AI Mode"}
+              </span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isRagMode ? "bg-primary" : "bg-muted"}`}
+              />
             </button>
 
             {/* Continuous Memory Switch */}
@@ -725,17 +771,25 @@ export const AIChat = () => {
               onClick={() => setUseMemory(!useMemory)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
                 useMemory
-                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm'
-                  : 'bg-card border-border/70 text-muted hover:text-text'
+                  ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-sm"
+                  : "bg-card border-border/70 text-muted hover:text-text"
               }`}
-              title={useMemory ? 'Personalized Memory is Active' : 'Click to enable Memory Personalization'}
+              title={
+                useMemory
+                  ? "Personalized Memory is Active"
+                  : "Click to enable Memory Personalization"
+              }
             >
               <Brain
                 size={12}
-                className={useMemory ? 'text-emerald-400 animate-pulse' : 'text-muted'}
+                className={
+                  useMemory ? "text-emerald-400 animate-pulse" : "text-muted"
+                }
               />
-              <span>{useMemory ? 'Personalized Memory' : 'Memory Off'}</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${useMemory ? 'bg-emerald-400' : 'bg-muted'}`} />
+              <span>{useMemory ? "Personalized Memory" : "Memory Off"}</span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${useMemory ? "bg-emerald-400" : "bg-muted"}`}
+              />
             </button>
           </div>
 
@@ -751,8 +805,8 @@ export const AIChat = () => {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-2 py-0.5 rounded-md text-[9.5px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === cat.id
-                      ? 'bg-primary text-[#07120D] font-bold shadow-sm'
-                      : 'bg-card/60 text-muted hover:text-text border border-border/40'
+                      ? "bg-primary text-[#07120D] font-bold shadow-sm"
+                      : "bg-card/60 text-muted hover:text-text border border-border/40"
                   }`}
                 >
                   {cat.label}
@@ -769,15 +823,17 @@ export const AIChat = () => {
               onSelectPrompt={(prompt, opts) => handleSendMessage(prompt, opts)}
               loading={isTyping}
               isRagMode={isRagMode}
+              activeCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
             />
           ) : (
             <div className="space-y-4">
               {messages.map((m) => {
-                const isAI = m.sender === 'ai';
+                const isAI = m.sender === "ai";
                 return (
                   <div
                     key={m._id || m.id || Math.random()}
-                    className={`flex ${isAI ? 'justify-start' : 'justify-end'} w-full`}
+                    className={`flex ${isAI ? "justify-start" : "justify-end"} w-full`}
                   >
                     {isAI ? (
                       <div className="w-full">
@@ -814,7 +870,9 @@ export const AIChat = () => {
               >
                 <Cpu size={14} className="text-primary animate-spin" />
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest flex gap-1 select-none">
-                  {isRagMode ? 'retrieving & synthesizing knowledge' : 'thinking'}
+                  {isRagMode
+                    ? "retrieving & synthesizing knowledge"
+                    : "thinking"}
                   <span className="animate-bounce">.</span>
                   <span className="animate-bounce delay-100">.</span>
                   <span className="animate-bounce delay-200">.</span>
@@ -837,8 +895,8 @@ export const AIChat = () => {
               onKeyDown={handleKeyDown}
               placeholder={
                 isRagMode
-                  ? 'Ask about 3-2-4-1 tactics, Gegenpressing, VAR protocols, or PSR financial rules...'
-                  : 'Type tactical layout, scout profile, or prompt...'
+                  ? "Ask about 3-2-4-1 tactics, Gegenpressing, VAR protocols, or PSR financial rules..."
+                  : "Type tactical layout, scout profile, or prompt..."
               }
               className="w-full py-1 px-2 bg-transparent text-xs text-text focus:outline-none placeholder-muted resize-none max-h-28 min-h-[24px] leading-relaxed font-medium"
               disabled={isTyping}
@@ -851,13 +909,13 @@ export const AIChat = () => {
                   onClick={() => setIsRagMode(!isRagMode)}
                   className={`text-[9px] px-2 py-0.5 rounded-full font-bold transition-all border flex items-center gap-1 cursor-pointer ${
                     isRagMode
-                      ? 'bg-primary/15 border-primary/40 text-primary'
-                      : 'bg-card border-border/60 text-muted hover:text-text'
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-card border-border/60 text-muted hover:text-text"
                   }`}
                   title="Toggle Knowledge Base RAG Grounding"
                 >
                   <Database size={9} />
-                  <span>RAG: {isRagMode ? 'ON' : 'OFF'}</span>
+                  <span>RAG: {isRagMode ? "ON" : "OFF"}</span>
                 </button>
 
                 <span className="text-[9px] text-muted font-mono select-none">
@@ -896,75 +954,106 @@ export const AIChat = () => {
   );
 };
 
-// Sub-component for Empty Chat State showcasing Knowledge Base Dossiers
-const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
-  const cards = [
-    {
-      title: '3-2-4-1 Box Midfield',
-      category: 'tactics',
-      categoryLabel: 'Tactics',
-      description: 'How inverted fullbacks overload half-spaces and establish rest defense.',
-      prompt: 'How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?',
-      icon: Cpu,
-      color: 'from-primary/10 to-primary/5 border-primary/20 hover:border-primary/45 text-primary',
-    },
-    {
-      title: 'Gegenpressing Mechanics',
-      category: 'tactics',
-      categoryLabel: 'Tactics',
-      description: 'Space compression, 5-8 second recovery window, and PPDA analysis.',
-      prompt: 'Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.',
-      icon: Sparkles,
-      color: 'from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45 text-emerald-400',
-    },
-    {
-      title: 'VAR Red Card Protocols',
-      category: 'rules',
-      categoryLabel: 'Rules',
-      description: 'IFAB Clear and obvious error thresholds and Attacking Possession Phase.',
-      prompt: 'What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?',
-      icon: ShieldCheck,
-      color: 'from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-400',
-    },
-    {
-      title: 'Premier League PSR Rules',
-      category: 'rules',
-      categoryLabel: 'Finance & Rules',
-      description: '£105m allowable losses, allowable deductions, and 5-year amortization caps.',
-      prompt: 'Explain Premier League PSR £105m loss limits and transfer fee amortization rules.',
-      icon: Award,
-      color: 'from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-400',
-    },
-    {
-      title: '2005 Istanbul Comeback',
-      category: 'history',
-      categoryLabel: 'History',
-      description: 'Benítez tactical shift neutralizing Kaká and Liverpool\'s 6-minute blitz.',
-      prompt: 'Break down the tactical adjustments in the 2005 Istanbul Champions League final.',
-      icon: BookOpen,
-      color: 'from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/45 text-purple-400',
-    },
-    {
-      title: 'xG, xA & Field Tilt',
-      category: 'scouting',
-      categoryLabel: 'Scouting',
-      description: 'Evaluating territory and chance quality beyond raw possession numbers.',
-      prompt: 'What is Field Tilt and how does it differentiate from total possession in scouting?',
-      icon: Database,
-      color: 'from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 hover:border-cyan-500/45 text-cyan-400',
-    },
-  ];
+// Sub-component for Empty Chat State with Dynamic & Shuffleable Suggestions
+const EmptyChatState = ({
+  onSelectPrompt,
+  loading,
+  isRagMode,
+  activeCategory = "all",
+  onCategoryChange,
+}) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const getCategoryTheme = (cat) => {
+    switch (cat) {
+      case "tactics":
+        return {
+          icon: Cpu,
+          color:
+            "from-primary/10 to-primary/5 border-primary/20 hover:border-primary/45 text-primary",
+          badgeClass: "bg-primary/15 text-primary border-primary/25",
+        };
+      case "rules":
+        return {
+          icon: ShieldCheck,
+          color:
+            "from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:border-amber-500/45 text-amber-400",
+          badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+        };
+      case "history":
+        return {
+          icon: BookOpen,
+          color:
+            "from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/45 text-purple-400",
+          badgeClass: "bg-purple-500/15 text-purple-400 border-purple-500/25",
+        };
+      case "scouting":
+        return {
+          icon: Compass,
+          color:
+            "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 hover:border-cyan-500/45 text-cyan-400",
+          badgeClass: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
+        };
+      case "analytics":
+        return {
+          icon: Database,
+          color:
+            "from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/45 text-blue-400",
+          badgeClass: "bg-blue-500/15 text-blue-400 border-blue-500/25",
+        };
+      default:
+        return {
+          icon: Sparkles,
+          color:
+            "from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/45 text-emerald-400",
+          badgeClass:
+            "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+        };
+    }
+  };
+
+  const fetchSuggestions = async (isManualShuffle = false) => {
+    if (isManualShuffle) {
+      setIsRefreshing(true);
+    } else {
+      setLoadingSuggestions(true);
+    }
+
+    try {
+      const data = await getAiSuggestionsApi({
+        category: activeCategory !== "all" ? activeCategory : undefined,
+        limit: 6,
+      });
+
+      if (Array.isArray(data) && data.length > 0) {
+        setSuggestions(data);
+      }
+    } catch (err) {
+      console.warn("Error loading dynamic AI suggestions:", err);
+    } finally {
+      setLoadingSuggestions(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuggestions(false);
+  }, [activeCategory]);
 
   return (
-    <div className="max-w-3xl mx-auto my-auto py-6 px-4 flex flex-col items-center justify-center text-center space-y-6 select-none">
+    <div className="max-w-3xl mx-auto my-auto py-5 px-3 flex flex-col items-center justify-center text-center space-y-5 select-none w-full">
+      {/* Visual Header Icon */}
       <div className="relative">
         <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-150 animate-pulse" />
-        <div className="relative p-3.5 bg-card border border-border/80 rounded-2xl shadow-xl flex items-center justify-center">
-          <Database size={32} className="text-primary animate-pulse" />
+        <div className="relative p-3 bg-card border border-border/80 rounded-2xl shadow-xl flex items-center justify-center">
+          <Database size={28} className="text-primary animate-pulse" />
         </div>
       </div>
 
-      <div className="space-y-2">
+      {/* Title & Description */}
+      <div className="space-y-1.5 max-w-xl">
         <div className="flex items-center justify-center gap-2">
           <h1 className="font-display font-black text-xl md:text-2xl text-text tracking-tight">
             Football Copilot Intelligence
@@ -972,49 +1061,120 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
           {isRagMode && (
             <Badge
               variant="default"
-              className="text-[10px] py-0.5 px-2 bg-primary/15 border-primary/30 text-primary font-bold"
+              className="text-[9.5px] py-0.5 px-2 bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
             >
               RAG Engine
             </Badge>
           )}
         </div>
-        <p className="text-xs text-muted max-w-lg leading-relaxed mx-auto">
-          Query indexed tactical treatises, IFAB rulebooks, historical dossiers, and recruitment metrics with cloud-synced MongoDB archives.
+        <p className="text-xs text-muted leading-relaxed mx-auto">
+          Query tactical treatises, IFAB rulebooks, historical dossiers, and
+          recruitment metrics dynamically synced with our live MongoDB archives.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full mt-2">
-        {cards.map((c, i) => {
-          const Icon = c.icon;
-          return (
-            <button
-              key={i}
-              onClick={() =>
-                !loading &&
-                onSelectPrompt(c.prompt, { isRag: true, category: c.category })
-              }
-              disabled={loading}
-              className={`p-3.5 rounded-xl border bg-gradient-to-br text-left space-y-2.5 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${c.color} disabled:opacity-50 disabled:pointer-events-none`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="p-1.5 w-fit rounded-lg bg-card border border-border/50 shadow-sm group-hover:scale-105 transition-transform">
-                  <Icon size={14} />
+      {/* Control bar: Category Filter Pills + Dynamic Shuffle Button */}
+      <div className="flex flex-wrap items-center justify-between gap-2 w-full max-w-2xl px-1 pt-2 border-t border-border/30">
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-[80%] no-scrollbar">
+          {RAG_CATEGORIES.map((cat) => {
+            const isSelected = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => onCategoryChange && onCategoryChange(cat.id)}
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all cursor-pointer border ${
+                  isSelected
+                    ? "bg-primary text-[#07120D] font-bold border-primary shadow-sm"
+                    : "bg-card/70 text-muted hover:text-text border-border/60 hover:border-border"
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => fetchSuggestions(true)}
+          disabled={loadingSuggestions || isRefreshing}
+          className="flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1 rounded-lg bg-card/80 border border-border/70 hover:border-primary/50 text-text hover:text-primary transition-all shadow-sm cursor-pointer disabled:opacity-50"
+          title="Shuffle suggestions from knowledge base"
+        >
+          <RotateCw
+            size={11}
+            className={isRefreshing ? "animate-spin text-primary" : ""}
+          />
+          <span>{isRefreshing ? "Refreshing..." : "Shuffle"}</span>
+        </button>
+      </div>
+
+      {/* Dynamic Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
+        {loadingSuggestions
+          ? // Skeleton Loaders
+            Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-3.5 rounded-xl border border-border/40 bg-card/40 text-left space-y-2.5 animate-pulse min-h-[105px]"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="w-6 h-6 rounded-lg bg-border/40" />
+                  <div className="w-12 h-3.5 rounded bg-border/30" />
                 </div>
-                <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-border/40 text-muted">
-                  {c.categoryLabel}
-                </span>
+                <div className="space-y-1.5">
+                  <div className="w-3/4 h-3.5 rounded bg-border/40" />
+                  <div className="w-full h-2.5 rounded bg-border/20" />
+                  <div className="w-2/3 h-2.5 rounded bg-border/20" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-xs font-bold text-text group-hover:text-primary transition-colors leading-snug">
-                  {c.title}
-                </h3>
-                <p className="text-[10px] text-muted leading-relaxed line-clamp-2">
-                  {c.description}
-                </p>
-              </div>
-            </button>
-          );
-        })}
+            ))
+          : suggestions.map((c, i) => {
+              const theme = getCategoryTheme(c.category);
+              const Icon = theme.icon;
+              return (
+                <motion.button
+                  key={c.id || i}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: i * 0.03 }}
+                  onClick={() =>
+                    !loading &&
+                    onSelectPrompt(c.prompt, {
+                      isRag: true,
+                      category: c.category,
+                    })
+                  }
+                  disabled={loading}
+                  className={`p-3.5 rounded-xl border bg-gradient-to-br text-left space-y-2 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${theme.color} disabled:opacity-50 disabled:pointer-events-none relative overflow-hidden`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-1.5 w-fit rounded-lg bg-card border border-border/50 shadow-sm group-hover:scale-105 transition-transform">
+                      <Icon size={14} />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {c.isDbSource && (
+                        <span className="text-[7.5px] font-mono px-1 py-0.2 rounded bg-primary/10 text-primary font-bold">
+                          DB
+                        </span>
+                      )}
+                      <span
+                        className={`text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border ${theme.badgeClass}`}
+                      >
+                        {c.categoryLabel || c.category}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold text-text group-hover:text-primary transition-colors leading-snug line-clamp-1">
+                      {c.title}
+                    </h3>
+                    <p className="text-[10.5px] text-muted leading-relaxed line-clamp-2">
+                      {c.description}
+                    </p>
+                  </div>
+                </motion.button>
+              );
+            })}
       </div>
     </div>
   );

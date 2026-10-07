@@ -523,6 +523,9 @@ async function getDocumentById(id) {
 /**
  * Delete a knowledge document and its chunks.
  */
+/**
+ * Delete a knowledge document and its chunks.
+ */
 async function deleteDocument(id) {
   const [deletedDoc] = await Promise.all([
     KnowledgeDocument.findByIdAndDelete(id),
@@ -532,6 +535,173 @@ async function deleteDocument(id) {
   return deletedDoc;
 }
 
+const FALLBACK_SUGGESTIONS = [
+  {
+    title: "3-2-4-1 Box Midfield",
+    category: "tactics",
+    categoryLabel: "Tactics",
+    description: "How inverted fullbacks overload half-spaces and establish rest defense.",
+    prompt: "How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?",
+    iconType: "tactics",
+  },
+  {
+    title: "Gegenpressing Mechanics",
+    category: "tactics",
+    categoryLabel: "Tactics",
+    description: "Space compression, 5-8 second recovery window, and PPDA analysis.",
+    prompt: "Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.",
+    iconType: "sparkles",
+  },
+  {
+    title: "VAR Red Card Protocols",
+    category: "rules",
+    categoryLabel: "Rules & IFAB",
+    description: "IFAB Clear and obvious error thresholds and Attacking Possession Phase.",
+    prompt: "What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?",
+    iconType: "rules",
+  },
+  {
+    title: "Premier League PSR Rules",
+    category: "rules",
+    categoryLabel: "Finance & Rules",
+    description: "£105m allowable losses, allowable deductions, and 5-year amortization caps.",
+    prompt: "Explain Premier League PSR £105m loss limits and transfer fee amortization rules.",
+    iconType: "award",
+  },
+  {
+    title: "2005 Istanbul Comeback",
+    category: "history",
+    categoryLabel: "History",
+    description: "Benítez tactical shift neutralizing Kaká and Liverpool's 6-minute blitz.",
+    prompt: "Break down the tactical adjustments in the 2005 Istanbul Champions League final.",
+    iconType: "history",
+  },
+  {
+    title: "xG, xA & Field Tilt",
+    category: "scouting",
+    categoryLabel: "Scouting",
+    description: "Evaluating territory and chance quality beyond raw possession numbers.",
+    prompt: "What is Field Tilt and how does it differentiate from total possession in scouting?",
+    iconType: "analytics",
+  },
+  {
+    title: "Low-Block Counter Breakdown",
+    category: "tactics",
+    categoryLabel: "Tactics",
+    description: "Tactics to unlock deep 5-4-1 defenses through third-man runs and switch-passes.",
+    prompt: "What are the best tactical patterns to break down an organized 5-4-1 low block?",
+    iconType: "tactics",
+  },
+  {
+    title: "Offside Law & Deliberate Play",
+    category: "rules",
+    categoryLabel: "Rules & IFAB",
+    description: "Law 11 interpretation on deflection vs deliberate play by defending players.",
+    prompt: "Clarify the IFAB Law 11 distinction between a deliberate play and an instinctive deflection.",
+    iconType: "rules",
+  },
+  {
+    title: "High-Press vs Inverted Fullback",
+    category: "tactics",
+    categoryLabel: "Tactics",
+    description: "How man-oriented pressing schemes target the inverting fullback in transition.",
+    prompt: "How can a team set pressing traps against an opponent utilizing inverted fullbacks?",
+    iconType: "tactics",
+  },
+  {
+    title: "Total Football 1974",
+    category: "history",
+    categoryLabel: "History",
+    description: "Rinus Michels and Johan Cruyff's spatial fluidity and pressing origins.",
+    prompt: "Explain the spatial concepts and tactical fluidity of the 1974 Dutch Total Football.",
+    iconType: "history",
+  },
+  {
+    title: "Defensive Midfielder (Pivot) Scouting",
+    category: "scouting",
+    categoryLabel: "Scouting",
+    description: "Key recruitment metrics: progressive pass reception, ball retention under pressure, and duel win %.",
+    prompt: "What metrics are most predictive when scouting an elite single pivot defensive midfielder?",
+    iconType: "analytics",
+  }
+];
+
+/**
+ * Generate dynamic suggestions from indexed documents and curated football topics.
+ */
+async function getRandomSuggestions({ category = "all", limit = 6 } = {}) {
+  const count = Number(limit) || 6;
+  const resultSuggestions = [];
+
+  try {
+    const pipeline = [];
+    if (category && category !== "all") {
+      pipeline.push({ $match: { category } });
+    }
+    pipeline.push({ $sample: { size: count } });
+    pipeline.push({
+      $project: {
+        title: 1,
+        category: 1,
+        tags: 1,
+        rawContent: { $substrCP: ["$rawContent", 0, 160] },
+      },
+    });
+
+    const docs = await KnowledgeDocument.aggregate(pipeline);
+
+    docs.forEach((doc) => {
+      let promptText = `Explain the tactical breakdown and core principles of: ${doc.title}`;
+      if (doc.category === "rules") {
+        promptText = `What are the official rules and guidelines regarding: ${doc.title}?`;
+      } else if (doc.category === "scouting" || doc.category === "analytics") {
+        promptText = `What are the key scouting metrics and analysis criteria for: ${doc.title}?`;
+      } else if (doc.category === "history") {
+        promptText = `Break down the historical impact and tactical story of: ${doc.title}`;
+      }
+
+      // Generate a clean snippet description
+      let cleanDesc = doc.rawContent
+        ? doc.rawContent.replace(/[#*`\n\r]/g, " ").trim().slice(0, 95) + "..."
+        : `Explore in-depth analysis and principles of ${doc.title}.`;
+
+      resultSuggestions.push({
+        id: doc._id.toString(),
+        title: doc.title.replace(/^(Tactical Breakdown:\s*|Guide:\s*|IFAB Rules:\s*)/i, "").trim(),
+        category: doc.category || "general",
+        categoryLabel:
+          doc.category === "rules"
+            ? "Rules & IFAB"
+            : doc.category.charAt(0).toUpperCase() + doc.category.slice(1),
+        description: cleanDesc,
+        prompt: promptText,
+        iconType: doc.category || "tactics",
+        isDbSource: true,
+      });
+    });
+  } catch (err) {
+    logger.warn(`Failed to aggregate KnowledgeDocument for suggestions: ${err.message}`);
+  }
+
+  // Fill up with curated fallbacks if DB returned fewer than count
+  let candidateFallbacks = FALLBACK_SUGGESTIONS;
+  if (category && category !== "all") {
+    candidateFallbacks = candidateFallbacks.filter((f) => f.category === category);
+  }
+
+  // Shuffle fallbacks
+  const shuffledFallbacks = [...candidateFallbacks].sort(() => 0.5 - Math.random());
+
+  for (const fallback of shuffledFallbacks) {
+    if (resultSuggestions.length >= count) break;
+    if (!resultSuggestions.some((s) => s.title.toLowerCase() === fallback.title.toLowerCase())) {
+      resultSuggestions.push(fallback);
+    }
+  }
+
+  return resultSuggestions.slice(0, count);
+}
+
 module.exports = {
   ingestDocument,
   retrieveContext,
@@ -539,4 +709,6 @@ module.exports = {
   listDocuments,
   getDocumentById,
   deleteDocument,
+  getRandomSuggestions,
 };
+
