@@ -1,6 +1,10 @@
 const { GoogleGenAI } = require("@google/genai");
 const { generateContentWithFallback } = require("../utils/geminiHelper");
-const { qdrantClient, ensureQdrantCollection, VECTOR_SIZE } = require("../config/qdrant");
+const {
+  qdrantClient,
+  ensureQdrantCollection,
+  VECTOR_SIZE,
+} = require("../config/qdrant");
 const { generateEmbedding, cosineSimilarity } = require("./embedding.service");
 const footballService = require("./football.service");
 const logger = require("../config/logger");
@@ -14,14 +18,149 @@ if (apiKey) {
 }
 
 const INITIAL_SCOUT_PLAYERS = [
-  { name: "Jude Bellingham", position: "CM/AM", team: "Real Madrid", age: 21, marketValue: "€180M", nationality: "England", traits: ["Box-to-box runs", "Physical duels", "Finishing", "Leadership"], archetype: "Complete Modern #8 / Box-to-Box Dynamo", stats: { goals: 23, assists: 13, passAccuracy: 88, progressiveCarries: 7.2 } },
-  { name: "Rodri", position: "DM", team: "Manchester City", age: 28, marketValue: "€130M", nationality: "Spain", traits: ["Line-breaking passes", "Defensive screening", "Press resistance", "Aerial strength"], archetype: "Elite Deep-Lying Controller & Anchor", stats: { goals: 9, assists: 14, passAccuracy: 93, progressiveCarries: 5.8 } },
-  { name: "Bukayo Saka", position: "RW", team: "Arsenal", age: 23, marketValue: "€140M", nationality: "England", traits: ["1v1 Isolation dribbling", "Cutback crossing", "Defensive tracking", "Composure"], archetype: "Inverted Direct Winger", stats: { goals: 20, assists: 14, passAccuracy: 83, progressiveCarries: 8.9 } },
-  { name: "Florian Wirtz", position: "AM/LW", team: "Bayer Leverkusen", age: 21, marketValue: "€130M", nationality: "Germany", traits: ["Half-space vision", "Through-balls", "Close control", "Pressing trigger"], archetype: "Creative Half-Space Playmaker", stats: { goals: 18, assists: 20, passAccuracy: 86, progressiveCarries: 7.9 } },
-  { name: "Eduardo Camavinga", position: "CM/DM/LB", team: "Real Madrid", age: 22, marketValue: "€100M", nationality: "France", traits: ["Tackle recovery", "Elastic dribbling", "Tactical fluidity", "Physical elasticity"], archetype: "Dynamic Transition Engine", stats: { goals: 2, assists: 5, passAccuracy: 90, progressiveCarries: 6.8 } },
-  { name: "Lamine Yamal", position: "RW", team: "Barcelona", age: 17, marketValue: "€150M", nationality: "Spain", traits: ["Trivela passing", "Unpredictable 1v1", "Decision making", "Spatial awareness"], archetype: "Generational Touchline Wizard", stats: { goals: 12, assists: 18, passAccuracy: 82, progressiveCarries: 9.4 } },
-  { name: "William Saliba", position: "CB", team: "Arsenal", age: 23, marketValue: "€80M", nationality: "France", traits: ["Recovery pace", "Calm 1v1 defending", "Build-up composure", "Positional dominance"], archetype: "Elite Modern Sweeper Center-Back", stats: { goals: 2, assists: 1, passAccuracy: 92, progressiveCarries: 4.2 } },
-  { name: "Pedri", position: "CM", team: "Barcelona", age: 22, marketValue: "€80M", nationality: "Spain", traits: ["Tempo dictation", "La Pausa", "360-degree vision", "Tight-space turning"], archetype: "Maestro Regista / Interior Playmaker", stats: { goals: 6, assists: 8, passAccuracy: 91, progressiveCarries: 6.2 } },
+  {
+    name: "Jude Bellingham",
+    position: "CM/AM",
+    team: "Real Madrid",
+    age: 21,
+    marketValue: "€180M",
+    nationality: "England",
+    traits: ["Box-to-box runs", "Physical duels", "Finishing", "Leadership"],
+    archetype: "Complete Modern #8 / Box-to-Box Dynamo",
+    stats: {
+      goals: 23,
+      assists: 13,
+      passAccuracy: 88,
+      progressiveCarries: 7.2,
+    },
+  },
+  {
+    name: "Rodri",
+    position: "DM",
+    team: "Manchester City",
+    age: 28,
+    marketValue: "€130M",
+    nationality: "Spain",
+    traits: [
+      "Line-breaking passes",
+      "Defensive screening",
+      "Press resistance",
+      "Aerial strength",
+    ],
+    archetype: "Elite Deep-Lying Controller & Anchor",
+    stats: { goals: 9, assists: 14, passAccuracy: 93, progressiveCarries: 5.8 },
+  },
+  {
+    name: "Bukayo Saka",
+    position: "RW",
+    team: "Arsenal",
+    age: 23,
+    marketValue: "€140M",
+    nationality: "England",
+    traits: [
+      "1v1 Isolation dribbling",
+      "Cutback crossing",
+      "Defensive tracking",
+      "Composure",
+    ],
+    archetype: "Inverted Direct Winger",
+    stats: {
+      goals: 20,
+      assists: 14,
+      passAccuracy: 83,
+      progressiveCarries: 8.9,
+    },
+  },
+  {
+    name: "Florian Wirtz",
+    position: "AM/LW",
+    team: "Bayer Leverkusen",
+    age: 21,
+    marketValue: "€130M",
+    nationality: "Germany",
+    traits: [
+      "Half-space vision",
+      "Through-balls",
+      "Close control",
+      "Pressing trigger",
+    ],
+    archetype: "Creative Half-Space Playmaker",
+    stats: {
+      goals: 18,
+      assists: 20,
+      passAccuracy: 86,
+      progressiveCarries: 7.9,
+    },
+  },
+  {
+    name: "Eduardo Camavinga",
+    position: "CM/DM/LB",
+    team: "Real Madrid",
+    age: 22,
+    marketValue: "€100M",
+    nationality: "France",
+    traits: [
+      "Tackle recovery",
+      "Elastic dribbling",
+      "Tactical fluidity",
+      "Physical elasticity",
+    ],
+    archetype: "Dynamic Transition Engine",
+    stats: { goals: 2, assists: 5, passAccuracy: 90, progressiveCarries: 6.8 },
+  },
+  {
+    name: "Lamine Yamal",
+    position: "RW",
+    team: "Barcelona",
+    age: 17,
+    marketValue: "€150M",
+    nationality: "Spain",
+    traits: [
+      "Trivela passing",
+      "Unpredictable 1v1",
+      "Decision making",
+      "Spatial awareness",
+    ],
+    archetype: "Generational Touchline Wizard",
+    stats: {
+      goals: 12,
+      assists: 18,
+      passAccuracy: 82,
+      progressiveCarries: 9.4,
+    },
+  },
+  {
+    name: "William Saliba",
+    position: "CB",
+    team: "Arsenal",
+    age: 23,
+    marketValue: "€80M",
+    nationality: "France",
+    traits: [
+      "Recovery pace",
+      "Calm 1v1 defending",
+      "Build-up composure",
+      "Positional dominance",
+    ],
+    archetype: "Elite Modern Sweeper Center-Back",
+    stats: { goals: 2, assists: 1, passAccuracy: 92, progressiveCarries: 4.2 },
+  },
+  {
+    name: "Pedri",
+    position: "CM",
+    team: "Barcelona",
+    age: 22,
+    marketValue: "€80M",
+    nationality: "Spain",
+    traits: [
+      "Tempo dictation",
+      "La Pausa",
+      "360-degree vision",
+      "Tight-space turning",
+    ],
+    archetype: "Maestro Regista / Interior Playmaker",
+    stats: { goals: 6, assists: 8, passAccuracy: 91, progressiveCarries: 6.2 },
+  },
 ];
 
 /**
@@ -34,11 +173,15 @@ async function initScoutCollection() {
   try {
     const colInfo = await qdrantClient.getCollection(SCOUT_COLLECTION);
     if ((colInfo.points_count ?? colInfo.vectors_count ?? 0) === 0) {
-      logger.info(`[ScoutService] '${SCOUT_COLLECTION}' is empty. Auto-indexing initial scout database...`);
+      logger.info(
+        `[ScoutService] '${SCOUT_COLLECTION}' is empty. Auto-indexing initial scout database...`,
+      );
       for (const player of INITIAL_SCOUT_PLAYERS) {
         await indexPlayerForScouting(player);
       }
-      logger.info(`[ScoutService] Auto-indexed ${INITIAL_SCOUT_PLAYERS.length} initial players into Qdrant.`);
+      logger.info(
+        `[ScoutService] Auto-indexed ${INITIAL_SCOUT_PLAYERS.length} initial players into Qdrant.`,
+      );
     }
   } catch (err) {
     logger.warn(`[ScoutService] Auto-seed check notice: ${err.message}`);
@@ -47,7 +190,7 @@ async function initScoutCollection() {
 
 // Immediately initialize collection on boot
 initScoutCollection().catch((err) =>
-  logger.warn(`[ScoutService] Scout collection check failed: ${err.message}`)
+  logger.warn(`[ScoutService] Scout collection check failed: ${err.message}`),
 );
 
 /**
@@ -55,18 +198,32 @@ initScoutCollection().catch((err) =>
  */
 function buildPlayerScoutNarrative(player) {
   const name = player.name || player.knownName || "Unknown Player";
-  const position = player.position || player.role || "Midfielder";
-  const team = player.team || player.currentClub || "Free Agent";
-  const nationality = player.nationality || "International";
-  const age = player.age || (player.dateOfBirth ? Math.floor((new Date() - new Date(player.dateOfBirth)) / 31557600000) : "24");
-  const stats = player.stats || player.metrics || {};
-  
-  return `Player Profile: ${name}.
-Age: ${age}, Position: ${position}, Club: ${team}, Nationality: ${nationality}.
-Key Traits: ${player.traits?.join(", ") || "Versatile, technically proficient, strong tactical awareness"}.
-Tactical Role: ${player.archetype || "Dynamic outfield player"}.
-Statistical Profile: Goals: ${stats.goals ?? 0}, Assists: ${stats.assists ?? 0}, Passing Accuracy: ${stats.passAccuracy ?? "85"}%, Progressive Carries: ${stats.progressiveCarries ?? "High"}, Defensive Workrate: ${stats.defensiveWorkrate ?? "Active"}, Physicality: ${stats.physicality ?? "Solid"}.
-Scouting Summary: High tactical intelligence, ability to break lines in possession, press-resistant, reliable in modern transition phases.`;
+  const position = player.position || player.role || null;
+  const team = player.team || player.currentClub || null;
+  const nationality = player.nationality || null;
+  const age =
+    player.age ||
+    (player.dateOfBirth
+      ? Math.floor((new Date() - new Date(player.dateOfBirth)) / 31557600000)
+      : null);
+  const stats = player.stats || player.metrics || null;
+
+  const parts = [`Player Profile: ${name}`];
+  if (age) parts.push(`Age: ${age}`);
+  if (position) parts.push(`Position: ${position}`);
+  if (team) parts.push(`Club: ${team}`);
+  if (nationality) parts.push(`Nationality: ${nationality}`);
+  if (
+    player.traits &&
+    Array.isArray(player.traits) &&
+    player.traits.length > 0
+  ) {
+    parts.push(`Key Traits: ${player.traits.join(", ")}`);
+  }
+  if (player.archetype) parts.push(`Tactical Role: ${player.archetype}`);
+  if (stats) parts.push(`Stats: ${JSON.stringify(stats)}`);
+
+  return parts.join(". ");
 }
 
 const crypto = require("crypto");
@@ -75,7 +232,10 @@ const crypto = require("crypto");
  * Converts a player ID / string into a valid RFC-4122 compliant 36-character UUID for Qdrant.
  */
 function generateScoutPointId(identifier) {
-  const hash = crypto.createHash("md5").update(String(identifier || "player_default")).digest("hex");
+  const cleanId = String(identifier || "player_default")
+    .toLowerCase()
+    .trim();
+  const hash = crypto.createHash("md5").update(cleanId).digest("hex");
   return [
     hash.slice(0, 8),
     hash.slice(8, 12),
@@ -86,16 +246,45 @@ function generateScoutPointId(identifier) {
 }
 
 /**
+ * Generates a deterministic fallback 768-dim normalized embedding vector from text.
+ */
+function createFallbackVector(text, dimension = 768) {
+  const vector = new Array(dimension).fill(0);
+  const hash = crypto
+    .createHash("sha256")
+    .update(String(text || "player_scout"))
+    .digest();
+  for (let i = 0; i < dimension; i++) {
+    const byteVal = hash[i % hash.length];
+    vector[i] = byteVal / 127.5 - 1.0;
+  }
+  // Normalize vector
+  const magnitude = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0)) || 1;
+  return vector.map((v) => v / magnitude);
+}
+
+/**
  * On-demand dynamically fetches player data (from DB or football service),
  * builds vector embeddings, and caches/upserts into Qdrant.
  */
 async function indexPlayerForScouting(playerData) {
-  try {
-    const narrative = buildPlayerScoutNarrative(playerData);
-    const vector = await generateEmbedding(narrative);
-    if (!vector || vector.length === 0) return null;
+  if (!playerData || (!playerData.name && !playerData.knownName)) return null;
 
-    const pointId = generateScoutPointId(playerData.id || playerData.name);
+  try {
+    // 1. Ensure collection exists even if user cleared Qdrant database
+    await ensureQdrantCollection(SCOUT_COLLECTION, VECTOR_SIZE);
+
+    const narrative = buildPlayerScoutNarrative(playerData);
+    console.log("narrative", narrative);
+    let vector = await generateEmbedding(narrative);
+    // If embedding API is unreachable/limited, use deterministic fallback vector
+    if (!vector || !Array.isArray(vector) || vector.length === 0) {
+      vector = createFallbackVector(narrative, VECTOR_SIZE);
+    }
+
+    const playerName = playerData.name || playerData.knownName;
+    const pointId = generateScoutPointId(playerName);
+
     await qdrantClient.upsert(SCOUT_COLLECTION, {
       wait: true,
       points: [
@@ -103,33 +292,31 @@ async function indexPlayerForScouting(playerData) {
           id: pointId,
           vector,
           payload: {
-            playerId: String(playerData.id || playerData._id || playerData.name),
-            name: playerData.name || playerData.knownName,
-            position: playerData.position || "Midfielder",
-            team: playerData.team || playerData.currentClub || "Unknown",
-            age: playerData.age || 24,
-            marketValue: playerData.marketValue || "€35M",
-            nationality: playerData.nationality || "Unknown",
+            playerId: String(playerData.id || playerData._id || playerName),
+            name: playerName,
+            position: playerData.position || null,
+            team: playerData.team || playerData.currentClub || null,
+            age: playerData.age || null,
+            marketValue: playerData.marketValue || null,
+            nationality: playerData.nationality || null,
             narrative,
-            archetype: playerData.archetype || "Tactical Dynamic Player",
-            overallRating: playerData.overallRating || 84,
-            metrics: playerData.stats || playerData.metrics || {
-              pace: 80,
-              shooting: 75,
-              passing: 84,
-              dribbling: 82,
-              defending: 78,
-              physical: 80,
-            },
+            archetype: playerData.archetype || null,
+            overallRating: playerData.overallRating || null,
+            metrics: playerData.stats || playerData.metrics || null,
+            indexedAt: new Date().toISOString(),
           },
         },
       ],
     });
 
-    logger.info(`[ScoutService] Indexed player '${playerData.name}' into Qdrant.`);
+    logger.info(
+      `[ScoutService] Indexed player '${playerName}' into Qdrant (${SCOUT_COLLECTION}).`,
+    );
     return { pointId, vector, narrative };
   } catch (error) {
-    logger.error(`[ScoutService] Failed to index player vector: ${error.message}`);
+    logger.error(
+      `[ScoutService] Failed to index player vector: ${error.message}`,
+    );
     return null;
   }
 }
@@ -142,70 +329,60 @@ async function generateScoutingReport(playerQuery, options = {}) {
   let searchResults = [];
   try {
     searchResults = await footballService.searchPlayers(playerQuery);
+    console.log("searchResults:", searchResults);
   } catch (err) {
-    logger.warn(`[ScoutService] Live search players fallback: ${err.message}`);
+    logger.warn(`[ScoutService] Live search players notice: ${err.message}`);
   }
 
-  const resolvedPlayer = (Array.isArray(searchResults) && searchResults[0]) ? searchResults[0] : {
-    name: playerQuery,
-    position: options.position || "Midfielder",
-    team: options.team || "Top European Club",
-    age: options.age || 24,
-    marketValue: options.marketValue || "€45M",
-    nationality: options.nationality || "International",
-  };
+  const resolvedPlayer =
+    Array.isArray(searchResults) && searchResults[0]
+      ? searchResults[0]
+      : {
+          name: playerQuery,
+          position: options.position || null,
+          team: options.team || null,
+          age: options.age || null,
+          marketValue: options.marketValue || null,
+          nationality: options.nationality || null,
+        };
 
-  // 2. Auto-Index into Qdrant for similarity lookups
-  indexPlayerForScouting(resolvedPlayer).catch((err) =>
-    logger.warn(`[ScoutService] Background indexing error: ${err.message}`)
-  );
-
-  // 3. Prompt Gemini with Football Scout Persona & Structured JSON format
+  // 2. Prompt Gemini with Football Scout Persona & Structured JSON format
   const prompt = `You are a world-class elite football Chief Scout & Sporting Director (Opta & UEFA Pro level).
 Analyze the following football player and produce a comprehensive, realistic scouting assessment.
 
 PLAYER CONTEXT:
 Name: ${resolvedPlayer.name}
-Position: ${resolvedPlayer.position || "Outfield"}
-Current Club: ${resolvedPlayer.team || "Professional Club"}
-Age: ${resolvedPlayer.age || "Prime"}
-Focus Areas Requested: ${options.focusAreas?.join(", ") || "Tactical, Physical, Technical, Value"}
+${resolvedPlayer.position ? `Position: ${resolvedPlayer.position}` : ""}
+${resolvedPlayer.team ? `Current Club: ${resolvedPlayer.team}` : ""}
+${resolvedPlayer.age ? `Age: ${resolvedPlayer.age}` : ""}
+${options.focusAreas?.length ? `Focus Areas Requested: ${options.focusAreas.join(", ")}` : ""}
 
 OUTPUT REQUIREMENT:
 Respond ONLY with a valid JSON object strictly matching this schema:
 {
   "playerName": "${resolvedPlayer.name}",
-  "age": ${typeof resolvedPlayer.age === "number" ? resolvedPlayer.age : 24},
-  "position": "${resolvedPlayer.position || "Midfielder"}",
-  "currentClub": "${resolvedPlayer.team || "European Club"}",
+  "age": number or null,
+  "position": "Primary position string",
+  "currentClub": "Current club string",
   "estimatedValue": "Estimated market value string (e.g. €45M)",
-  "overallRating": 85,
-  "archetype": "e.g. Inverted Playmaker / Box-to-Box Destroyer / Ball-Playing Defender",
+  "overallRating": number between 40 and 99,
+  "archetype": "Tactical archetype string (e.g. Inverted Playmaker / Box-to-Box Destroyer)",
   "playerSummary": "3-4 sentences executive scouting summary of his profile and playing style.",
-  "strengths": [
-    "Specific tactical/technical strength 1",
-    "Specific tactical/technical strength 2",
-    "Specific tactical/technical strength 3",
-    "Specific tactical/technical strength 4"
-  ],
-  "weaknesses": [
-    "Specific area of improvement 1",
-    "Specific area of improvement 2",
-    "Specific area of improvement 3"
-  ],
+  "strengths": ["string", "string", "string", "string"],
+  "weaknesses": ["string", "string", "string"],
   "tacticalSuitability": {
     "possessionStyle": "How they perform in possession / build-up",
     "transitionStyle": "How they perform in offensive / defensive transitions",
     "pressingStyle": "High press intensity and spatial discipline"
   },
   "ratings": {
-    "pace": 82,
-    "shooting": 76,
-    "passing": 86,
-    "dribbling": 84,
-    "defending": 72,
-    "physicality": 80,
-    "tacticalIQ": 88
+    "pace": number (0-99),
+    "shooting": number (0-99),
+    "passing": number (0-99),
+    "dribbling": number (0-99),
+    "defending": number (0-99),
+    "physicality": number (0-99),
+    "tacticalIQ": number (0-99)
   },
   "marketVerdict": "Clear recommendation (e.g., Must-Sign, High-Risk High-Reward, Development Prospect, Elite Starter)."
 }`;
@@ -219,8 +396,16 @@ Respond ONLY with a valid JSON object strictly matching this schema:
       },
     });
 
-    const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text);
+    const responseText =
+      response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!responseText) {
+      throw new Error(
+        "AI model returned an empty response for scouting report.",
+      );
+    }
+
     const parsed = JSON.parse(responseText.trim());
+    console.log("Scout parsed", parsed);
 
     // Index the newly generated rich scout data into Qdrant
     indexPlayerForScouting({
@@ -233,7 +418,9 @@ Respond ONLY with a valid JSON object strictly matching this schema:
       archetype: parsed.archetype,
       traits: parsed.strengths,
       stats: parsed.ratings,
-    }).catch((err) => logger.warn(`[ScoutService] Qdrant post-index notice: ${err.message}`));
+    }).catch((err) =>
+      logger.warn(`[ScoutService] Qdrant post-index notice: ${err.message}`),
+    );
 
     return {
       success: true,
@@ -244,52 +431,50 @@ Respond ONLY with a valid JSON object strictly matching this schema:
       },
     };
   } catch (error) {
-    logger.error(`[ScoutService] Error in generateScoutingReport: ${error.message}`);
-    // Safe structured fallback
-    return {
-      success: true,
-      data: {
-        playerName: resolvedPlayer.name,
-        age: 24,
-        position: resolvedPlayer.position || "Midfielder",
-        currentClub: resolvedPlayer.team || "Top Flight Club",
-        estimatedValue: "€40M - €55M",
-        overallRating: 86,
-        archetype: "Complete Box-to-Box Midfielder",
-        playerSummary: `${resolvedPlayer.name} is a high-impact modern player renowned for spatial awareness, press resistance, and progressive ball distribution.`,
-        strengths: ["Progressive passing", "Press resistance", "High duel win rate", "Tactical flexibility"],
-        weaknesses: ["Occasional fatigue in high-tempo congestion", "Aerially challenged against taller physical markers"],
-        tacticalSuitability: {
-          possessionStyle: "Maintains rhythm and breaks defensive lines with vertical passing.",
-          transitionStyle: "Quick to initiate counter-attacks or execute counter-pressing.",
-          pressingStyle: "Aggressive front-foot trigger when defending transitions."
-        },
-        ratings: { pace: 80, shooting: 74, passing: 87, dribbling: 83, defending: 76, physicality: 82, tacticalIQ: 89 },
-        marketVerdict: "Elite starter profile with immediate impact potential."
-      }
-    };
+    logger.error(
+      `[ScoutService] Error in generateScoutingReport: ${error.message}`,
+    );
+    throw error;
   }
 }
 
 /**
  * Finds similar players (Lookalikes / Replacements) using Qdrant vector similarity and AI synthesis.
  */
-async function findSimilarPlayers({ targetPlayer, position, maxAge, maxFee, limit = 4 }) {
+async function findSimilarPlayers({
+  targetPlayer,
+  position,
+  maxAge,
+  maxFee,
+  limit = 4,
+}) {
   const queryText = `Player scout profile similar to ${targetPlayer}. Position: ${position || "outfield"}. Modern tactical traits, similar attributes and style.`;
   const queryVector = await generateEmbedding(queryText);
 
   let vectorMatches = [];
   try {
+    await ensureQdrantCollection(SCOUT_COLLECTION, VECTOR_SIZE);
     if (queryVector && queryVector.length > 0) {
-      const qdrantResults = await qdrantClient.search(SCOUT_COLLECTION, {
-        vector: queryVector,
-        limit: Math.max(limit * 2, 6),
-        with_payload: true,
-      });
-      vectorMatches = qdrantResults || [];
+      if (typeof qdrantClient.query === "function") {
+        const response = await qdrantClient.query(SCOUT_COLLECTION, {
+          query: queryVector,
+          limit: Math.max(limit * 2, 6),
+          with_payload: true,
+        });
+        vectorMatches = response?.points || (Array.isArray(response) ? response : []);
+      } else if (typeof qdrantClient.search === "function") {
+        const qdrantResults = await qdrantClient.search(SCOUT_COLLECTION, {
+          vector: queryVector,
+          limit: Math.max(limit * 2, 6),
+          with_payload: true,
+        });
+        vectorMatches = qdrantResults || [];
+      }
     }
   } catch (err) {
-    logger.warn(`[ScoutService] Qdrant similarity search notice: ${err.message}`);
+    logger.warn(
+      `[ScoutService] Qdrant similarity search notice: ${err.message}`,
+    );
   }
 
   // Generate detailed lookalike dossier using Gemini with vector context
@@ -329,7 +514,14 @@ Return ONLY a valid JSON array matching this exact schema:
       },
     });
 
-    const text = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text);
+    const text =
+      response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error(
+        "AI model returned an empty response for similar players.",
+      );
+    }
+
     const similarPlayers = JSON.parse(text.trim());
 
     return {
@@ -340,44 +532,22 @@ Return ONLY a valid JSON array matching this exact schema:
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    logger.error(`[ScoutService] Error in findSimilarPlayers: ${error.message}`);
-    return {
-      success: true,
-      targetPlayer,
-      similarPlayers: [
-        {
-          name: "Mats Wieffer",
-          club: "Brighton & Hove Albion",
-          league: "Premier League",
-          age: 24,
-          position: position || "DM",
-          marketValue: "€30M",
-          similarityScore: 89,
-          styleComparison: `Shares ${targetPlayer}'s composure under pressure, defensive screening, and progressive first touch.`,
-          keyMetrics: { passAccuracy: "87%", progressivePassesPer90: "5.8", tacklesInterceptionsPer90: "4.6", dribbleSuccess: "62%" },
-          scoutRecommendation: "High-value tactical twin with Premier League adaptability."
-        },
-        {
-          name: "Alan Varela",
-          club: "FC Porto",
-          league: "Liga Portugal",
-          age: 23,
-          position: position || "DM/CM",
-          marketValue: "€35M",
-          similarityScore: 86,
-          styleComparison: `Combines deep-lying playmaking with South American bite and positional discipline like ${targetPlayer}.`,
-          keyMetrics: { passAccuracy: "91%", progressivePassesPer90: "7.1", tacklesInterceptionsPer90: "3.9", dribbleSuccess: "74%" },
-          scoutRecommendation: "Prime candidate ready for top 5 league transition."
-        }
-      ],
-    };
+    logger.error(
+      `[ScoutService] Error in findSimilarPlayers: ${error.message}`,
+    );
+    throw error;
   }
 }
 
 /**
  * Analyzes how well a player fits into a specific club/manager tactical system.
  */
-async function analyzeTacticalFit({ playerName, targetClub, manager, systemRole }) {
+async function analyzeTacticalFit({
+  playerName,
+  targetClub,
+  manager,
+  systemRole,
+}) {
   const prompt = `You are a Tactical Analyst and Match Analyst for UEFA Champions League clubs.
 Perform a Tactical Fit & Transfer Suitability analysis:
 Player: ${playerName}
@@ -416,35 +586,22 @@ Return ONLY a valid JSON object matching this schema:
       },
     });
 
-    const text = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text);
+    const text =
+      response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error("AI model returned an empty response for tactical fit.");
+    }
+
     const parsed = JSON.parse(text.trim());
     return {
       success: true,
       data: parsed,
     };
   } catch (error) {
-    logger.error(`[ScoutService] Error in analyzeTacticalFit: ${error.message}`);
-    return {
-      success: true,
-      data: {
-        playerName,
-        targetClub,
-        tacticalFitScore: 84,
-        fitVerdict: "Strong Tactical Alignment",
-        systemRole: "Central Progressor & Press Trigger",
-        tacticalPros: [
-          `Enhances ${targetClub}'s ball retention in the middle third.`,
-          "Provides high defensive workrate during defensive transition phases.",
-          "High football IQ allows rapid adaptation to manager's positional instructions."
-        ],
-        tacticalRisks: [
-          "May require time to adapt to the physical tempo of high-pressing sequences.",
-          "Spacing overlaps if paired alongside another high-volume ball handler."
-        ],
-        predictedFormation: "4-3-3 / 3-2-4-1 in possession phase",
-        finalVerdict: `Recommended signing. ${playerName} elevates ${targetClub}'s technical ceiling and provides long-term tactical value.`
-      }
-    };
+    logger.error(
+      `[ScoutService] Error in analyzeTacticalFit: ${error.message}`,
+    );
+    throw error;
   }
 }
 

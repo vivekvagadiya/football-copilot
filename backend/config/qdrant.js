@@ -6,6 +6,7 @@ const QDRANT_API_KEY = process.env.QDRANT_API_KEY || undefined;
 const DEFAULT_COLLECTION = process.env.QDRANT_COLLECTION || "football_knowledge";
 const FACTS_MEMORY_COLLECTION = process.env.QDRANT_FACTS_COLLECTION || "user_facts_memory";
 const EPISODIC_MEMORY_COLLECTION = process.env.QDRANT_EPISODIC_COLLECTION || "user_episodic_memory";
+const SCOUT_COLLECTION = process.env.QDRANT_SCOUT_COLLECTION || "player_scout_vectors";
 const VECTOR_SIZE = 768; // Gemini embedding dimension
 
 const qdrantClient = new QdrantClient({
@@ -35,7 +36,7 @@ async function ensureQdrantCollection(collectionName = DEFAULT_COLLECTION, vecto
         },
       });
 
-      // Create payload indexes if memory collection
+      // Create payload indexes if memory or scout collection
       if (collectionName === FACTS_MEMORY_COLLECTION || collectionName === EPISODIC_MEMORY_COLLECTION) {
         try {
           await qdrantClient.createPayloadIndex(collectionName, {
@@ -44,6 +45,15 @@ async function ensureQdrantCollection(collectionName = DEFAULT_COLLECTION, vecto
           });
         } catch (idxErr) {
           // Payload index creation can be skipped silently if existing
+        }
+      } else if (collectionName === SCOUT_COLLECTION) {
+        try {
+          await qdrantClient.createPayloadIndex(collectionName, {
+            field_name: "name",
+            field_schema: "keyword",
+          });
+        } catch (idxErr) {
+          // Ignore if exists
         }
       }
     }
@@ -64,6 +74,7 @@ async function initAllQdrantCollections() {
       ensureQdrantCollection(DEFAULT_COLLECTION),
       ensureQdrantCollection(FACTS_MEMORY_COLLECTION),
       ensureQdrantCollection(EPISODIC_MEMORY_COLLECTION),
+      ensureQdrantCollection(SCOUT_COLLECTION),
     ]);
   } catch (err) {
     logger.warn(`[Qdrant] Collection initialization warning: ${err.message}`);
@@ -75,7 +86,9 @@ module.exports = {
   DEFAULT_COLLECTION,
   FACTS_MEMORY_COLLECTION,
   EPISODIC_MEMORY_COLLECTION,
+  SCOUT_COLLECTION,
   VECTOR_SIZE,
   ensureQdrantCollection,
   initAllQdrantCollections,
 };
+
