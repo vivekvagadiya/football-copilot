@@ -84,6 +84,14 @@ async function ingestDocument(docData, options = {}) {
       embedding: embeddings[idx] || [],
     }));
 
+    // Save KnowledgeDocument with text content & keywords only (excluding heavy float embeddings)
+    const cleanChunks = chunks.map((chunk) => ({
+      chunkIndex: chunk.chunkIndex,
+      content: chunk.content,
+      tokenEstimate: chunk.tokenEstimate,
+      keywords: chunk.keywords,
+    }));
+
     const document = new KnowledgeDocument({
       title,
       category,
@@ -92,8 +100,8 @@ async function ingestDocument(docData, options = {}) {
       tags: combinedTags,
       metadata,
       rawContent,
-      chunks: chunksWithEmbeddings,
-      chunkCount: chunksWithEmbeddings.length,
+      chunks: cleanChunks,
+      chunkCount: cleanChunks.length,
       createdBy,
     });
 

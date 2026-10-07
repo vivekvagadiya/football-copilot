@@ -253,12 +253,28 @@ export const AIChat = () => {
     intervalRef.current = interval;
   };
 
-  const handleSendMessage = async (textToSend) => {
+  const handleSendMessage = async (textToSend, options = {}) => {
     if (!textToSend.trim() || isTyping) return;
 
     const currentInput = textToSend;
     setInput('');
     setIsTyping(true);
+
+    const targetIsRag = options.isRag !== undefined ? options.isRag : isRagMode;
+    const targetCategory =
+      options.category !== undefined
+        ? options.category
+        : selectedCategory !== 'all'
+        ? selectedCategory
+        : undefined;
+
+    // If card or action explicitly requested RAG mode, sync UI toggles
+    if (options.isRag && !isRagMode) {
+      setIsRagMode(true);
+    }
+    if (options.category && options.category !== selectedCategory) {
+      setSelectedCategory(options.category);
+    }
 
     let currentThreadId = activeThreadId;
 
@@ -267,7 +283,7 @@ export const AIChat = () => {
       try {
         const createRes = await createAiConversationApi({
           title: currentInput.length > 28 ? currentInput.substring(0, 28) + '...' : currentInput,
-          category: selectedCategory !== 'all' ? selectedCategory : 'all',
+          category: targetCategory && targetCategory !== 'all' ? targetCategory : 'all',
         });
         const createdConv = createRes?.data;
         if (createdConv) {
@@ -306,8 +322,8 @@ export const AIChat = () => {
       // Send to MongoDB backed endpoint (executes RAG/AI, recalls memory, and persists turns in DB)
       const res = await sendMessageToAiConversationApi(currentThreadId, {
         prompt: currentInput,
-        isRag: isRagMode,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        isRag: targetIsRag,
+        category: targetCategory && targetCategory !== 'all' ? targetCategory : undefined,
         useMemory,
       });
 
@@ -326,7 +342,7 @@ export const AIChat = () => {
           aiMessage.text,
           aiMessage.sources || [],
           aiMessage.chunks || [],
-          aiMessage.isRag || isRagMode,
+          aiMessage.isRag || targetIsRag,
           aiMessage.recalledMemories || []
         );
       } else {
@@ -415,19 +431,21 @@ export const AIChat = () => {
   };
 
   const renderSidebarContent = () => (
-    <div className="flex flex-col h-full min-h-0 justify-between">
-      <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
-        <div className="text-[10px] text-muted uppercase font-bold tracking-wider flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Cpu size={12} className="text-primary" /> Analytical Archives
-          </div>
-          {threads.length > 0 && (
-            <span className="text-[9px] bg-border/40 px-1.5 py-0.5 rounded text-muted font-bold">
-              {threads.length}
-            </span>
-          )}
+    <div className="flex flex-col h-full min-h-0">
+      {/* Fixed Header */}
+      <div className="text-[10px] text-muted uppercase font-bold tracking-wider flex items-center justify-between shrink-0 pb-3">
+        <div className="flex items-center gap-1.5">
+          <Cpu size={12} className="text-primary" /> Analytical Archives
         </div>
+        {threads.length > 0 && (
+          <span className="text-[9px] bg-border/40 px-1.5 py-0.5 rounded text-muted font-bold">
+            {threads.length}
+          </span>
+        )}
+      </div>
 
+      {/* ONLY Scrollable Conversation List */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1.5">
         {loadingThreads ? (
           <div className="text-center py-8 text-muted space-y-2">
             <Cpu size={18} className="mx-auto text-primary animate-spin" />
@@ -442,45 +460,46 @@ export const AIChat = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {threads.map((ch) => {
-              const isActive = ch._id === activeThreadId;
-              return (
-                <div
-                  key={ch._id}
-                  onClick={() => handleSelectThread(ch._id)}
-                  className={`group w-full p-2.5 rounded-xl border flex items-center justify-between transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? 'bg-primary/10 border-primary/40 text-text shadow-sm'
-                      : 'border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 pr-1">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'
-                      }`}
-                    />
-                    <span className="text-xs font-semibold truncate leading-none">
-                      {ch.title || 'Untitled Session'}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={(e) => handleDeleteThread(ch._id, e)}
-                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 text-muted transition-all cursor-pointer shrink-0"
-                    title="Delete session from MongoDB"
-                  >
-                    <Trash2 size={11} />
-                  </button>
+          threads.map((ch) => {
+            const isActive = ch._id === activeThreadId;
+            return (
+              <div
+                key={ch._id}
+                onClick={() => handleSelectThread(ch._id)}
+                className={`group w-full p-2.5 rounded-xl border flex items-center justify-between transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-primary/10 border-primary/40 text-text shadow-sm'
+                    : 'border-transparent hover:border-border hover:bg-card/40 text-muted hover:text-text'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0 pr-1">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      isActive ? 'bg-primary animate-pulse' : 'bg-muted/40'
+                    }`}
+                  />
+                  <span className="text-xs font-semibold truncate leading-none">
+                    {ch.title || 'Untitled Session'}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
+                <button
+                  onClick={(e) => handleDeleteThread(ch._id, e)}
+                  className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 text-muted transition-all cursor-pointer shrink-0"
+                  title="Delete session from MongoDB"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Fixed Bottom Hub & Actions */}
+      <div className="shrink-0 pt-3 space-y-3">
         {/* Knowledge Base & Tactical Memory Hub in Sidebar */}
-        <div className="pt-2 border-t border-border/40 space-y-1.5">
+        <div className="border-t border-border/40 pt-3 space-y-1.5">
           <button
             onClick={() => setIsKnowledgeDrawerOpen(true)}
             className="w-full p-2.5 rounded-xl border border-primary/20 bg-primary/[0.04] hover:bg-primary/[0.08] hover:border-primary/40 transition-all text-left flex items-center justify-between group cursor-pointer"
@@ -527,21 +546,21 @@ export const AIChat = () => {
             />
           </button>
         </div>
-      </div>
 
-      {threads.length > 0 && (
-        <div className="pt-3 border-t border-border mt-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleClearHistory}
-            className="w-full text-[10px] h-7 font-bold py-0 flex items-center justify-center gap-1.5 text-muted hover:text-red-400 hover:border-red-500/30"
-          >
-            <Trash2 size={10} />
-            Clear cloud history
-          </Button>
-        </div>
-      )}
+        {threads.length > 0 && (
+          <div className="border-t border-border pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearHistory}
+              className="w-full text-[10px] h-7 font-bold py-0 flex items-center justify-center gap-1.5 text-muted hover:text-red-400 hover:border-red-500/30"
+            >
+              <Trash2 size={10} />
+              Clear cloud history
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -567,7 +586,9 @@ export const AIChat = () => {
       <KnowledgeBaseDrawer
         isOpen={isKnowledgeDrawerOpen}
         onClose={() => setIsKnowledgeDrawerOpen(false)}
-        onSelectDocumentPrompt={(prompt) => handleSendMessage(prompt)}
+        onSelectDocumentPrompt={(prompt) =>
+          handleSendMessage(prompt, { isRag: true })
+        }
       />
 
       {/* Tactical Memory Drawer */}
@@ -745,7 +766,7 @@ export const AIChat = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
           {messages.length === 0 ? (
             <EmptyChatState
-              onSelectPrompt={handleSendMessage}
+              onSelectPrompt={(prompt, opts) => handleSendMessage(prompt, opts)}
               loading={isTyping}
               isRagMode={isRagMode}
             />
@@ -880,7 +901,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
   const cards = [
     {
       title: '3-2-4-1 Box Midfield',
-      category: 'Tactics',
+      category: 'tactics',
+      categoryLabel: 'Tactics',
       description: 'How inverted fullbacks overload half-spaces and establish rest defense.',
       prompt: 'How does the 3-2-4-1 box midfield overload half-spaces and maintain rest defense?',
       icon: Cpu,
@@ -888,7 +910,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
     },
     {
       title: 'Gegenpressing Mechanics',
-      category: 'Tactics',
+      category: 'tactics',
+      categoryLabel: 'Tactics',
       description: 'Space compression, 5-8 second recovery window, and PPDA analysis.',
       prompt: 'Explain Gegenpressing triggers, the 5-8 second rule, and PPDA measurement.',
       icon: Sparkles,
@@ -896,7 +919,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
     },
     {
       title: 'VAR Red Card Protocols',
-      category: 'Rules',
+      category: 'rules',
+      categoryLabel: 'Rules',
       description: 'IFAB Clear and obvious error thresholds and Attacking Possession Phase.',
       prompt: 'What are the IFAB Laws and VAR protocols for direct red cards and penalty checks?',
       icon: ShieldCheck,
@@ -904,7 +928,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
     },
     {
       title: 'Premier League PSR Rules',
-      category: 'Finance & Rules',
+      category: 'rules',
+      categoryLabel: 'Finance & Rules',
       description: '£105m allowable losses, allowable deductions, and 5-year amortization caps.',
       prompt: 'Explain Premier League PSR £105m loss limits and transfer fee amortization rules.',
       icon: Award,
@@ -912,7 +937,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
     },
     {
       title: '2005 Istanbul Comeback',
-      category: 'History',
+      category: 'history',
+      categoryLabel: 'History',
       description: 'Benítez tactical shift neutralizing Kaká and Liverpool\'s 6-minute blitz.',
       prompt: 'Break down the tactical adjustments in the 2005 Istanbul Champions League final.',
       icon: BookOpen,
@@ -920,7 +946,8 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
     },
     {
       title: 'xG, xA & Field Tilt',
-      category: 'Scouting',
+      category: 'scouting',
+      categoryLabel: 'Scouting',
       description: 'Evaluating territory and chance quality beyond raw possession numbers.',
       prompt: 'What is Field Tilt and how does it differentiate from total possession in scouting?',
       icon: Database,
@@ -962,7 +989,10 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
           return (
             <button
               key={i}
-              onClick={() => !loading && onSelectPrompt(c.prompt)}
+              onClick={() =>
+                !loading &&
+                onSelectPrompt(c.prompt, { isRag: true, category: c.category })
+              }
               disabled={loading}
               className={`p-3.5 rounded-xl border bg-gradient-to-br text-left space-y-2.5 cursor-pointer group transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${c.color} disabled:opacity-50 disabled:pointer-events-none`}
             >
@@ -971,7 +1001,7 @@ const EmptyChatState = ({ onSelectPrompt, loading, isRagMode }) => {
                   <Icon size={14} />
                 </div>
                 <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-border/40 text-muted">
-                  {c.category}
+                  {c.categoryLabel}
                 </span>
               </div>
               <div className="space-y-1">

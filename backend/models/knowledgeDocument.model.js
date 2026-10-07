@@ -22,10 +22,6 @@ const chunkSchema = new mongoose.Schema(
         lowercase: true,
       },
     ],
-    embedding: {
-      type: [Number],
-      default: [],
-    },
   },
   { _id: true }
 );
@@ -41,7 +37,17 @@ const knowledgeDocumentSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["tactics", "rules", "history", "scouting", "news", "general"],
+      enum: [
+        "tactics",
+        "rules",
+        "history",
+        "scouting",
+        "analytics",
+        "player_roles",
+        "transfers",
+        "news",
+        "general",
+      ],
       default: "general",
       index: true,
     },
