@@ -1240,4 +1240,9 @@ module.exports = {
   getMarketValueTransfers,
   getNews,
   getNewsSummary,
+  calculateWinProbabilities,
+  resolveExpectedGoals,
+  getTeamRating,
+  mapMatch,
+  mapTransfer,
 };
