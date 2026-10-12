@@ -15,6 +15,22 @@ router.get(
   aiController.getRecommendations,
 );
 
+// AI Daily Briefing (Sprint 27)
+router.get(
+  "/daily-briefing",
+  authenticate,
+  cacheMiddleware(1800),
+  aiController.getDailyBriefing,
+);
+
+// AI Dynamic Chat Suggestions (Sprint 20)
+router.get(
+  "/suggestions",
+  authenticate,
+  aiController.getChatSuggestions,
+);
+
+
 // ==================== Sprint 18: RAG Routes ====================
 // RAG Query: Context-grounded response generation
 router.post("/rag/query", authenticate, aiController.queryRAG);

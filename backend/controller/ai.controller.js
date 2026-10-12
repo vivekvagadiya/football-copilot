@@ -17,14 +17,21 @@ const chat = asyncHandler(async (req, res) => {
   let memoryPromptBlock = "";
   let recalledMemories = [];
   if (useMemory && userId) {
-    const memoryResult = await memoryService.recallUserContext(userId, prompt.trim());
+    const memoryResult = await memoryService.recallUserContext(
+      userId,
+      prompt.trim(),
+    );
     memoryPromptBlock = memoryResult.memoryPromptBlock;
     recalledMemories = memoryResult.recalledMemories;
   }
 
-  const responseText = await aiService.generateChatResponse(prompt, history || [], {
-    memoryPromptBlock,
-  });
+  const responseText = await aiService.generateChatResponse(
+    prompt,
+    history || [],
+    {
+      memoryPromptBlock,
+    },
+  );
 
   return apiResponse.success(res, "AI response generated successfully", {
     response: responseText,
@@ -34,7 +41,22 @@ const chat = asyncHandler(async (req, res) => {
 
 const getRecommendations = asyncHandler(async (req, res) => {
   const data = await recommendationService.getAIRecommendations(req.user._id);
-  return apiResponse.success(res, "AI recommendations fetched successfully", data);
+  return apiResponse.success(
+    res,
+    "AI recommendations fetched successfully",
+    data,
+  );
+});
+
+const getDailyBriefing = asyncHandler(async (req, res) => {
+  const data = await recommendationService.getDailyBriefingService(
+    req.user._id,
+  );
+  return apiResponse.success(
+    res,
+    "AI daily briefing fetched successfully",
+    data,
+  );
 });
 
 // ==================== Sprint 18: RAG Endpoints ====================
@@ -50,7 +72,11 @@ const queryRAG = asyncHandler(async (req, res) => {
   let memoryPromptBlock = "";
   let recalledMemories = [];
   if (useMemory && userId) {
-    const memoryResult = await memoryService.recallUserContext(userId, query.trim(), { category });
+    const memoryResult = await memoryService.recallUserContext(
+      userId,
+      query.trim(),
+      { category },
+    );
     memoryPromptBlock = memoryResult.memoryPromptBlock;
     recalledMemories = memoryResult.recalledMemories;
   }
@@ -68,10 +94,15 @@ const queryRAG = asyncHandler(async (req, res) => {
 });
 
 const ingestDocument = asyncHandler(async (req, res) => {
-  const { title, rawContent, category, source, author, tags, metadata } = req.body;
+  const { title, rawContent, category, source, author, tags, metadata } =
+    req.body;
 
   if (!title || !rawContent) {
-    return apiResponse.error(res, "Title and rawContent are required for ingestion.", 400);
+    return apiResponse.error(
+      res,
+      "Title and rawContent are required for ingestion.",
+      400,
+    );
   }
 
   const result = await ragService.ingestDocument({
@@ -85,7 +116,12 @@ const ingestDocument = asyncHandler(async (req, res) => {
     createdBy: req.user?._id,
   });
 
-  return apiResponse.success(res, "Document ingested and chunked successfully", result, 201);
+  return apiResponse.success(
+    res,
+    "Document ingested and chunked successfully",
+    result,
+    201,
+  );
 });
 
 const listDocuments = asyncHandler(async (req, res) => {
@@ -98,7 +134,11 @@ const listDocuments = asyncHandler(async (req, res) => {
     limit: limit ? Number(limit) : 20,
   });
 
-  return apiResponse.success(res, "Knowledge documents retrieved successfully", data);
+  return apiResponse.success(
+    res,
+    "Knowledge documents retrieved successfully",
+    data,
+  );
 });
 
 const getDocumentById = asyncHandler(async (req, res) => {
@@ -109,7 +149,11 @@ const getDocumentById = asyncHandler(async (req, res) => {
     return apiResponse.error(res, "Knowledge document not found", 404);
   }
 
-  return apiResponse.success(res, "Knowledge document retrieved successfully", doc);
+  return apiResponse.success(
+    res,
+    "Knowledge document retrieved successfully",
+    doc,
+  );
 });
 
 const deleteDocument = asyncHandler(async (req, res) => {
@@ -117,10 +161,16 @@ const deleteDocument = asyncHandler(async (req, res) => {
   const deleted = await ragService.deleteDocument(id);
 
   if (!deleted) {
-    return apiResponse.error(res, "Knowledge document not found or already deleted", 404);
+    return apiResponse.error(
+      res,
+      "Knowledge document not found or already deleted",
+      404,
+    );
   }
 
-  return apiResponse.success(res, "Knowledge document deleted successfully", { id });
+  return apiResponse.success(res, "Knowledge document deleted successfully", {
+    id,
+  });
 });
 
 // ==================== Sprint 18: AI Conversation & Chat Persistence ====================
@@ -149,7 +199,7 @@ const listConversations = asyncHandler(async (req, res) => {
   return apiResponse.success(
     res,
     "AI conversations retrieved successfully",
-    conversations
+    conversations,
   );
 });
 
@@ -166,7 +216,7 @@ const getConversationById = asyncHandler(async (req, res) => {
   return apiResponse.success(
     res,
     "Conversation retrieved successfully",
-    conversation
+    conversation,
   );
 });
 
@@ -179,11 +229,11 @@ const createConversation = asyncHandler(async (req, res) => {
     title: title || "New Session",
     category,
     messages: [
-      {
-        sender: "ai",
-        text: "Tactical Intelligence synchronized. Ask me about **inverted fullbacks**, **half-space overloads**, **VAR clear & obvious error principles**, or **Premier League PSR thresholds**.",
-        isRag: true,
-      },
+      // {
+      //   sender: "ai",
+      //   text: "Tactical Intelligence synchronized. Ask me about **inverted fullbacks**, **half-space overloads**, **VAR clear & obvious error principles**, or **Premier League PSR thresholds**.",
+      //   isRag: true,
+      // },
     ],
   });
 
@@ -193,7 +243,7 @@ const createConversation = asyncHandler(async (req, res) => {
     res,
     "AI conversation created successfully",
     saved,
-    201
+    201,
   );
 });
 
@@ -213,10 +263,14 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
 
   // Auto-generate title if currently default and first user message
   const hasUserMessage = conversation.messages.some((m) => m.sender === "user");
-  if (!hasUserMessage && (conversation.title === "New Session" || !conversation.title)) {
-    const trimmedTitle = prompt.trim().length > 30 
-      ? prompt.trim().substring(0, 30) + "..." 
-      : prompt.trim();
+  if (
+    !hasUserMessage &&
+    (conversation.title === "New Session" || !conversation.title)
+  ) {
+    const trimmedTitle =
+      prompt.trim().length > 30
+        ? prompt.trim().substring(0, 30) + "..."
+        : prompt.trim();
     conversation.title = trimmedTitle;
   }
 
@@ -224,9 +278,13 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
   let memoryPromptBlock = "";
   let recalledMemories = [];
   if (useMemory) {
-    const memoryResult = await memoryService.recallUserContext(userId, prompt.trim(), {
-      category: category || conversation.category,
-    });
+    const memoryResult = await memoryService.recallUserContext(
+      userId,
+      prompt.trim(),
+      {
+        category: category || conversation.category,
+      },
+    );
     memoryPromptBlock = memoryResult.memoryPromptBlock;
     recalledMemories = memoryResult.recalledMemories;
   }
@@ -252,7 +310,7 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
     const ragResult = await ragService.generateRAGResponse(
       prompt,
       historyContext,
-      { category: category || conversation.category, memoryPromptBlock }
+      { category: category || conversation.category, memoryPromptBlock },
     );
     aiAnswer = ragResult.answer;
     sources = ragResult.sources || [];
@@ -280,12 +338,16 @@ const sendMessageToConversation = asyncHandler(async (req, res) => {
   setImmediate(() => {
     memoryService
       .extractFactsFromTurns(userId, conversation._id, conversation.messages)
-      .catch((err) => console.warn("[MemoryAsync] Fact extraction warning:", err.message));
+      .catch((err) =>
+        console.warn("[MemoryAsync] Fact extraction warning:", err.message),
+      );
 
     if (conversation.messages.length >= 8) {
       memoryService
         .summarizeAndArchiveConversation(userId, conversation._id)
-        .catch((err) => console.warn("[MemoryAsync] Summarization warning:", err.message));
+        .catch((err) =>
+          console.warn("[MemoryAsync] Summarization warning:", err.message),
+        );
     }
   });
 
@@ -313,18 +375,14 @@ const updateConversation = asyncHandler(async (req, res) => {
   const updated = await AiConversation.findOneAndUpdate(
     { _id: id, userId },
     { $set: updateFields },
-    { new: true }
+    { new: true },
   );
 
   if (!updated) {
     return apiResponse.error(res, "Conversation not found", 404);
   }
 
-  return apiResponse.success(
-    res,
-    "Conversation updated successfully",
-    updated
-  );
+  return apiResponse.success(res, "Conversation updated successfully", updated);
 });
 
 const deleteConversation = asyncHandler(async (req, res) => {
@@ -344,17 +402,19 @@ const clearAllConversations = asyncHandler(async (req, res) => {
 
   const result = await AiConversation.deleteMany({ userId });
 
-  return apiResponse.success(
-    res,
-    "All conversations cleared successfully",
-    { deletedCount: result.deletedCount }
-  );
+  return apiResponse.success(res, "All conversations cleared successfully", {
+    deletedCount: result.deletedCount,
+  });
 });
 
 const getQdrantStatus = asyncHandler(async (req, res) => {
   const qdrantService = require("../services/qdrant.service");
   const stats = await qdrantService.getCollectionStats();
-  return apiResponse.success(res, "Qdrant vector database status fetched successfully", stats);
+  return apiResponse.success(
+    res,
+    "Qdrant vector database status fetched successfully",
+    stats,
+  );
 });
 
 // ==================== Sprint 19: AI Memory Management Endpoints ====================
@@ -364,7 +424,11 @@ const getUserMemories = asyncHandler(async (req, res) => {
   const { category } = req.query;
 
   const memories = await memoryService.getUserMemories(userId, { category });
-  return apiResponse.success(res, "User memories fetched successfully", memories);
+  return apiResponse.success(
+    res,
+    "User memories fetched successfully",
+    memories,
+  );
 });
 
 const createUserMemory = asyncHandler(async (req, res) => {
@@ -381,7 +445,12 @@ const createUserMemory = asyncHandler(async (req, res) => {
     confidence,
   });
 
-  return apiResponse.success(res, "User memory created successfully", memory, 201);
+  return apiResponse.success(
+    res,
+    "User memory created successfully",
+    memory,
+    201,
+  );
 });
 
 const updateUserMemory = asyncHandler(async (req, res) => {
@@ -408,7 +477,11 @@ const deleteUserMemory = asyncHandler(async (req, res) => {
 
   const deleted = await memoryService.deleteMemory(userId, id);
   if (!deleted) {
-    return apiResponse.error(res, "Memory item not found or already deleted", 404);
+    return apiResponse.error(
+      res,
+      "Memory item not found or already deleted",
+      404,
+    );
   }
 
   return apiResponse.success(res, "User memory deleted successfully", { id });
@@ -423,15 +496,32 @@ const clearAllUserMemories = asyncHandler(async (req, res) => {
   });
 });
 
+// ==================== Sprint 20: AI Dynamic Chat Suggestions ====================
+const getChatSuggestions = asyncHandler(async (req, res) => {
+  const { category, limit } = req.query;
+  const suggestions = await ragService.getRandomSuggestions({
+    category,
+    limit: limit ? Number(limit) : 6,
+  });
+
+  return apiResponse.success(
+    res,
+    "AI chat suggestions fetched successfully",
+    suggestions
+  );
+});
+
 module.exports = {
   chat,
   getRecommendations,
+  getDailyBriefing,
   queryRAG,
   ingestDocument,
   listDocuments,
   getDocumentById,
   deleteDocument,
   getQdrantStatus,
+  getChatSuggestions,
   listConversations,
   getConversationById,
   createConversation,
@@ -445,6 +535,4 @@ module.exports = {
   deleteUserMemory,
   clearAllUserMemories,
 };
-
-
 

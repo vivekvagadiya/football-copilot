@@ -7,8 +7,8 @@ const MOCK_LIVE_MATCHES = [
     leagueName: "Premier League",
     status: "live",
     minute: 74,
-    homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84 },
-    awayTeam: { id: "65", name: "Man City", logo: "🩵", score: 1, xG: 1.12 },
+    homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84, isDemoEstimate: true, xGLabel: "Demo Estimate" },
+    awayTeam: { id: "65", name: "Man City", logo: "🩵", score: 1, xG: 1.12, isDemoEstimate: true, xGLabel: "Demo Estimate" },
     date: "Live",
     timestamp: new Date().toISOString(),
   },
@@ -36,7 +36,7 @@ const MOCK_UPCOMING_MATCHES = [
       score: null,
       xG: null,
     },
-    prediction: { homeWin: 42, draw: 28, awayWin: 30 },
+    prediction: { homeWin: 42, draw: 28, awayWin: 30, isDemoEstimate: true, label: "Demo Estimate", model: "Bivariate Poisson Model (Demo)" },
   },
   {
     id: "m4",
@@ -53,7 +53,7 @@ const MOCK_UPCOMING_MATCHES = [
       xG: null,
     },
     awayTeam: { id: "61", name: "Chelsea", logo: "🔵", score: null, xG: null },
-    prediction: { homeWin: 55, draw: 25, awayWin: 20 },
+    prediction: { homeWin: 55, draw: 25, awayWin: 20, isDemoEstimate: true, label: "Demo Estimate", model: "Bivariate Poisson Model (Demo)" },
   },
 ];
 
@@ -142,13 +142,15 @@ const MOCK_MATCH_DETAILS = {
     leagueName: "Premier League",
     status: "live",
     minute: 74,
-    homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84 },
+    homeTeam: { id: "57", name: "Arsenal", logo: "🔴", score: 2, xG: 1.84, isDemoEstimate: true, xGLabel: "Demo Estimate" },
     awayTeam: {
       id: "65",
       name: "Man City",
       logo: "🩵",
       score: 1,
       xG: 1.12,
+      isDemoEstimate: true,
+      xGLabel: "Demo Estimate",
     },
     date: "Live",
     venue: "Emirates Stadium",
@@ -176,7 +178,7 @@ const MOCK_MATCH_DETAILS = {
     },
     venue: "Santiago Bernabéu",
     referee: "Jesús Gil Manzano",
-    prediction: { homeWin: 42, draw: 28, awayWin: 30 },
+    prediction: { homeWin: 42, draw: 28, awayWin: 30, isDemoEstimate: true, label: "Demo Estimate", model: "Bivariate Poisson Model (Demo)" },
   },
   m4: {
     id: "m4",
@@ -200,7 +202,7 @@ const MOCK_MATCH_DETAILS = {
     },
     venue: "Anfield",
     referee: "Anthony Taylor",
-    prediction: { homeWin: 55, draw: 25, awayWin: 20 },
+    prediction: { homeWin: 55, draw: 25, awayWin: 20, isDemoEstimate: true, label: "Demo Estimate", model: "Bivariate Poisson Model (Demo)" },
   },
 };
 

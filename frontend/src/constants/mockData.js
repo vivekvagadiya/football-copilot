@@ -588,7 +588,7 @@ export const MATCHES = [
     awayTeam: { id: 'barcelona', name: 'Barcelona', logo: '🔵🔴', score: null, xG: null },
     venue: 'Santiago Bernabéu, Madrid',
     referee: 'Jesús Gil Manzano',
-    prediction: { homeWin: 42, draw: 28, awayWin: 30 }
+    prediction: { homeWin: 42, draw: 28, awayWin: 30, isDemoEstimate: true, label: "Demo Estimate" }
   },
 
   // Finished Match
@@ -598,8 +598,8 @@ export const MATCHES = [
     leagueName: 'Bundesliga',
     status: 'finished',
     date: 'Yesterday',
-    homeTeam: { id: 'bayern', name: 'Bayern Munich', logo: '🔴⚪', score: 3, xG: 2.45 },
-    awayTeam: { id: 'dortmund', name: 'Borussia Dortmund', logo: '🟡⚫', score: 1, xG: 1.05 },
+    homeTeam: { id: 'bayern', name: 'Bayern Munich', logo: '🔴⚪', score: 3, xG: 2.45, isDemoEstimate: true },
+    awayTeam: { id: 'dortmund', name: 'Borussia Dortmund', logo: '🟡⚫', score: 1, xG: 1.05, isDemoEstimate: true },
     possession: { home: 61, away: 39 },
     shots: { home: { total: 18, onTarget: 8 }, away: { total: 8, onTarget: 3 } },
     corners: { home: 7, away: 2 },
@@ -622,7 +622,7 @@ export const MATCHES = [
     homeTeam: { id: 'liverpool', name: 'Liverpool', logo: '🔴', score: null, xG: null },
     awayTeam: { id: 'chelsea', name: 'Chelsea', logo: '🔵', score: null, xG: null },
     venue: 'Anfield, Liverpool',
-    prediction: { homeWin: 55, draw: 25, awayWin: 20 }
+    prediction: { homeWin: 55, draw: 25, awayWin: 20, isDemoEstimate: true, label: "Demo Estimate" }
   }
 ];
 

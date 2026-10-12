@@ -170,10 +170,14 @@ const executeToolCalls = async (functionCalls) => {
     const { name: functionName, args: functionArgs } = call;
     const handler = toolHandlers[functionName];
 
-    console.log(`\n=================== [TOOL CALL DISPATCHED] ===================`);
+    console.log(
+      `\n=================== [TOOL CALL DISPATCHED] ===================`,
+    );
     console.log(`🛠️  Tool Name : ${functionName}`);
     console.log(`📥 Arguments : ${JSON.stringify(functionArgs, null, 2)}`);
-    console.log(`=============================================================\n`);
+    console.log(
+      `=============================================================\n`,
+    );
 
     if (!handler) {
       logger.warn(
@@ -195,10 +199,16 @@ const executeToolCalls = async (functionCalls) => {
       const executionResult = await handler(functionArgs);
       const duration = Date.now() - startTime;
 
-      console.log(`\n=================== [TOOL RESULT RECEIVED] ===================`);
+      console.log(
+        `\n=================== [TOOL RESULT RECEIVED] ===================`,
+      );
       console.log(`✅ Tool Name : ${functionName} (took ${duration}ms)`);
-      console.log(`📤 Data Preview : ${JSON.stringify(executionResult).slice(0, 300)}...`);
-      console.log(`=============================================================\n`);
+      console.log(
+        `📤 Data Preview : ${JSON.stringify(executionResult).slice(0, 300)}...`,
+      );
+      console.log(
+        `=============================================================\n`,
+      );
 
       logger.info(
         `[Tool Calling] Tool '${functionName}' executed successfully in ${duration}ms.`,
@@ -211,7 +221,10 @@ const executeToolCalls = async (functionCalls) => {
         },
       };
     } catch (execErr) {
-      console.error(`❌ [Tool Calling Error] ${functionName}:`, execErr.message);
+      console.error(
+        `❌ [Tool Calling Error] ${functionName}:`,
+        execErr.message,
+      );
       logger.error(
         `[Tool Calling] Error executing tool '${functionName}':`,
         execErr,
@@ -239,8 +252,12 @@ const generateChatResponse = async (prompt, history = [], options = {}) => {
     throw new Error("Gemini API key is missing in server environment.");
   }
 
-  console.log(`\n🤖 [AI Chat Request] Prompt: "${prompt}" | History length: ${history.length}`);
-  logger.info(`[AI Chat] Prompt: "${prompt}" | History length: ${history.length}`);
+  console.log(
+    `\n🤖 [AI Chat Request] Prompt: "${prompt}" | History length: ${history.length}`,
+  );
+  logger.info(
+    `[AI Chat] Prompt: "${prompt}" | History length: ${history.length}`,
+  );
 
   let activeSystemInstruction = SYSTEM_INSTRUCTION;
   if (options.memoryPromptBlock) {
@@ -274,8 +291,10 @@ const generateChatResponse = async (prompt, history = [], options = {}) => {
     const MAX_LOOPS = 5; // Guard against infinite tool-calling loops
 
     while (loopCount < MAX_LOOPS) {
-      console.log(`🔄 [AI Chat Loop #${loopCount + 1}] Calling Gemini API (Model: ${selectedModel})...`);
-      
+      console.log(
+        `🔄 [AI Chat Loop #${loopCount + 1}] Calling Gemini API (Model: ${selectedModel})...`,
+      );
+
       // Send message to Gemini with registered tools
       const response = await generateContentWithFallback(aiClient, {
         model: selectedModel,
@@ -291,15 +310,21 @@ const generateChatResponse = async (prompt, history = [], options = {}) => {
       // CASE A: No tool call requested. This is the final text answer from Gemini.
       if (!response.functionCalls || response.functionCalls.length === 0) {
         if (response && response.text) {
-          console.log(`💬 [AI Chat Final Response] Output received (${response.text.length} chars)`);
-          logger.info(`[AI Chat] Final answer delivered successfully without further tool calls.`);
+          console.log(
+            `💬 [AI Chat Final Response] Output received (${response.text.length} chars)`,
+          );
+          logger.info(
+            `[AI Chat] Final answer delivered successfully without further tool calls.`,
+          );
           return response.text;
         }
         throw new Error("No text response returned from Gemini API.");
       }
 
       // CASE B: Gemini requested one or more tool calls.
-      console.log(`⚡ [Gemini Tool Call Triggered] Function Calls Count: ${response.functionCalls.length}`);
+      console.log(
+        `⚡ [Gemini Tool Call Triggered] Function Calls Count: ${response.functionCalls.length}`,
+      );
       logger.info(
         `[Tool Calling] Gemini requested tool execution: ${JSON.stringify(response.functionCalls)}`,
       );
@@ -326,8 +351,7 @@ const generateChatResponse = async (prompt, history = [], options = {}) => {
       "Max tool calling loop threshold exceeded without a text response.",
     );
   } catch (error) {
-    console.error("❌ [AI Chat Error]:", error.message);
-    logger.error("Error generating Gemini response with tools:", error);
+    logger.error(`Error generating Gemini response: ${error.message}`);
     throw error;
   }
 };
@@ -369,7 +393,7 @@ ${JSON.stringify(matchData, null, 2)}`;
 
     throw new Error("No text response returned from Gemini API.");
   } catch (error) {
-    logger.error("Error generating Gemini match summary:", error);
+    logger.error(`Error generating Gemini match summary: ${error.message}`);
     throw error;
   }
 };
@@ -416,7 +440,7 @@ Source: ${newsItem.sourceStr || "Unknown Source"}`;
 
     throw new Error("No text response returned from Gemini API.");
   } catch (error) {
-    logger.error("Error generating Gemini news summary:", error);
+    logger.error(`Error generating Gemini news summary: ${error.message}`);
     throw error;
   }
 };
@@ -487,7 +511,7 @@ You must return a structured JSON response matching this schema:
 
     throw new Error("No text response returned from Gemini API.");
   } catch (error) {
-    logger.error("Error generating Gemini recommendations:", error);
+    logger.error(`Error generating Gemini recommendations: ${error.message}`);
     throw error;
   }
 };
@@ -554,16 +578,317 @@ You must return a structured JSON object containing an array of notifications:
 
     throw new Error("No text response returned from Gemini API.");
   } catch (error) {
-    logger.error("Error generating Gemini notifications:", error);
+    logger.error(`Error generating Gemini notifications: ${error.message}`);
     throw error;
+  }
+};
+
+/**
+ * Generate structured AI Timeline & Tactical Momentum analysis using Gemini AI
+ * @param {Object} matchDetails - Match data with teams, events, score, and status
+ * @returns {Promise<Object>} Structured tactical timeline with turning points and key phases
+ */
+const generateMatchAiTimelineResponse = async (matchDetails) => {
+  const homeName = matchDetails.homeTeam?.name || "Home Team";
+  const awayName = matchDetails.awayTeam?.name || "Away Team";
+  const events = matchDetails.events || [];
+  const status = matchDetails.status || "SCHEDULED";
+
+  // If match has no events or is upcoming, provide a tactical preview timeline
+  if (!events || events.length === 0) {
+    return {
+      matchStatus: status,
+      overallTacticalVerdict: `${homeName} vs ${awayName}: Match awaiting kickoff. Tactical formations and minute-by-minute AI analysis will activate once the whistle blows.`,
+      keyPhases: [
+        {
+          phase: "1'-45'",
+          summary: "Opening half tactical sparring and shape establishment.",
+          dominantTeam: "Neutral",
+          momentumScore: 50,
+        },
+        {
+          phase: "46'-90'",
+          summary: "Decisive tactical phase and substitution impacts.",
+          dominantTeam: "Neutral",
+          momentumScore: 50,
+        },
+      ],
+      turningPoints: [],
+      tacticalTrends: [
+        "Expected high intensity pressing battle",
+        "Key duel expected in central midfield transitions",
+      ],
+    };
+  }
+
+  if (!aiClient) {
+    // Generate fallback timeline data if API key is not configured
+    return {
+      matchStatus: status,
+      overallTacticalVerdict: `Dynamic encounter between ${homeName} and ${awayName} featuring ${events.length} decisive match actions.`,
+      keyPhases: [
+        {
+          phase: "1'-45'",
+          summary: `Intense first half exchanges with tactical pressing from ${homeName}.`,
+          dominantTeam: homeName,
+          momentumScore: 60,
+        },
+        {
+          phase: "46'-90'",
+          summary: `Second half tactical adjustments and high-tempo counter-attacks.`,
+          dominantTeam: awayName,
+          momentumScore: 55,
+        },
+      ],
+      turningPoints: events.slice(0, 6).map((e) => ({
+        minute: e.minute,
+        type: e.type,
+        team: e.team || "home",
+        player: e.player || "Key Player",
+        badge:
+          e.type === "goal"
+            ? "Game Changer"
+            : e.type?.includes("card")
+              ? "Disciplinary Turning Point"
+              : "Tactical Action",
+        tacticalContext:
+          e.type === "goal"
+            ? `Decisive clinical strike altering tactical risk balance.`
+            : `Strategic foul breaking up dangerous counter-attacking progression.`,
+        impact: e.type === "goal" ? "HIGH" : "MEDIUM",
+        momentumShift: `${e.player} generated significant pitch momentum for their team.`,
+      })),
+      tacticalTrends: [
+        `High pressing triggers exploited in defensive transitions`,
+        `Direct vertical ball progression following turnovers`,
+      ],
+    };
+  }
+
+  const prompt = `Analyze this football match event timeline and generate an elite AI Tactical Timeline breakdown.
+Match: ${homeName} (${matchDetails.homeTeam?.score ?? 0}) vs ${awayName} (${matchDetails.awayTeam?.score ?? 0})
+Status: ${status} | League: ${matchDetails.leagueName || "League"}
+Events Log:
+${JSON.stringify(events, null, 2)}
+
+You must return a strictly valid JSON object matching this schema:
+{
+  "matchStatus": "${status}",
+  "overallTacticalVerdict": "A 1-2 sentence punchy tactical verdict summarizing the momentum dynamics and critical turning points.",
+  "keyPhases": [
+    {
+      "phase": "1'-15'",
+      "summary": "Concise summary of tactical flow in this phase",
+      "dominantTeam": "Name of team or 'Contested'",
+      "momentumScore": 75 (Integer 1-100 indicating dominance intensity)
+    }
+  ],
+  "turningPoints": [
+    {
+      "minute": 23,
+      "type": "goal or card or substitution or chance",
+      "team": "home or away",
+      "player": "Player Name",
+      "badge": "e.g. '🔥 Game Changer', '⚡ Tactical Shift', '🛡️ Defensive Breakdown', '🛑 Momentum Breaker'",
+      "tacticalContext": "1 sentence explaining why/how this moment changed match dynamics tactically.",
+      "impact": "HIGH or MEDIUM or LOW",
+      "momentumShift": "e.g. 'Man City (+30% attack dominance)' or 'Arsenal low-block forced'"
+    }
+  ],
+  "tacticalTrends": [
+    "1-2 bullet strings describing key strategic shifts throughout the match"
+  ]
+}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await generateContentWithFallback(aiClient, {
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction:
+          "You are Football Copilot's Lead Tactical Analyst. Analyze match event sequences into high-value tactical turning points and momentum shifts. Always respond ONLY with a valid JSON object.",
+        temperature: 0.5,
+        responseMimeType: "application/json",
+      },
+    });
+
+    if (response && response.text) {
+      return JSON.parse(response.text);
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error(`Error generating Gemini match AI timeline: ${error.message}`);
+    // Fallback on error
+    return {
+      matchStatus: status,
+      overallTacticalVerdict: `Match encounter between ${homeName} and ${awayName} with ${events.length} logged incidents.`,
+      keyPhases: [
+        {
+          phase: "1'-45'",
+          summary: `Opening half tactical battle between ${homeName} and ${awayName}.`,
+          dominantTeam: homeName,
+          momentumScore: 58,
+        },
+        {
+          phase: "46'-90'",
+          summary: `Second half tactical changes and physical duel.`,
+          dominantTeam: awayName,
+          momentumScore: 54,
+        },
+      ],
+      turningPoints: events.slice(0, 5).map((e) => ({
+        minute: e.minute,
+        type: e.type,
+        team: e.team || "home",
+        player: e.player || "Key Performer",
+        badge: e.type === "goal" ? "🔥 Game Changer" : "⚡ Tactical Shift",
+        tacticalContext: `Key event altering match tempo and tactical spacing.`,
+        impact: e.type === "goal" ? "HIGH" : "MEDIUM",
+        momentumShift: `${e.player || "Squad"} shifted momentum.`,
+      })),
+      tacticalTrends: [
+        "Tactical adaptations made in response to scoreline pressure",
+      ],
+    };
+  }
+};
+
+/**
+ * Generate structured AI Daily Briefing / Morning Football Digest using Gemini AI
+ * @param {Array} favorites - User favorites list
+ * @param {Array} matches - Live/upcoming/recent matches
+ * @param {Array} news - Recent trending news
+ * @returns {Promise<Object>} Structured daily briefing digest
+ */
+const generateDailyBriefingResponse = async (favorites, matches, news) => {
+  const todayStr = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const fallbackData = {
+    date: todayStr,
+    greeting: "Good Day! Here is your 60-second Football Copilot digest.",
+    headline:
+      "High-stakes European matchday unfolds with critical title and top-4 positioning on the line.",
+    keyResults: [
+      {
+        match: "Recent League Action",
+        highlight:
+          "Fast-paced fixtures with tactical pressing duels shaping league standings.",
+      },
+    ],
+    todayPicks: matches.slice(0, 3).map((m) => ({
+      match: `${m.homeTeam} vs ${m.awayTeam}`,
+      league: m.leagueName || "League",
+      time: m.minute
+        ? `LIVE ${m.minute}'`
+        : m.date
+          ? new Date(m.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "Today",
+      whyWatch: "Key tactical clash with significant points at stake.",
+      excitementScore: 8,
+    })),
+    topIntel: news.slice(0, 3).map((n) => ({
+      tag: "INTEL",
+      text:
+        n.title ||
+        "Squad tactics and transfer maneuvers continue across top clubs.",
+    })),
+    statOfTheDay:
+      "Teams utilizing high transition press have generated 28% more expected goals from counter-attacks this season.",
+    suggestedPrompt:
+      "What are the most impactful tactical matchups to watch today?",
+  };
+
+  if (!aiClient) {
+    return fallbackData;
+  }
+
+  const prompt = `Generate an elite, personalized 60-second AI Daily Football Briefing for today (${todayStr}).
+
+User Favorites:
+${JSON.stringify(favorites, null, 2)}
+
+Today's Matches (Live & Upcoming):
+${JSON.stringify(matches.slice(0, 10), null, 2)}
+
+Trending News & Intel:
+${JSON.stringify(news.slice(0, 8), null, 2)}
+
+You must return a strictly valid JSON object matching this schema:
+{
+  "date": "${todayStr}",
+  "greeting": "Punchy, personalized morning greeting (e.g., 'Good Morning! Here is your 60-second Football Copilot digest.')",
+  "headline": "A bold 1-2 sentence overarching story connecting today's top fixtures and user favorite teams.",
+  "keyResults": [
+    { "match": "Team A vs Team B", "highlight": "1 punchy sentence summarizing recent action or result." }
+  ],
+  "todayPicks": [
+    {
+      "match": "Team A vs Team B",
+      "league": "League Name",
+      "time": "Kickoff time string or 'LIVE'",
+      "whyWatch": "1 sentence tactical reason why this is a must-watch game.",
+      "excitementScore": 9 (Integer 1-10)
+    }
+  ],
+  "topIntel": [
+    {
+      "tag": "TRANSFER or INJURY or TACTICAL or STAT",
+      "text": "1 sentence concise intelligence piece."
+    }
+  ],
+  "statOfTheDay": "1 surprising, verified or realistic advanced football metric / stat.",
+  "suggestedPrompt": "A prompt string the user could ask Football Copilot regarding today's games"
+}`;
+
+  const envModel = process.env.GEMINI_MODEL;
+  const selectedModel = envModel ? envModel : "gemini-2.0-flash";
+
+  try {
+    const response = await generateContentWithFallback(aiClient, {
+      model: selectedModel,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction:
+          "You are the Editor-in-Chief and Chief Football Analyst of Football Copilot. You create personalized, hyper-engaging morning football briefings. Respond ONLY with valid JSON.",
+        temperature: 0.6,
+        responseMimeType: "application/json",
+      },
+    });
+
+    if (response && response.text) {
+      return JSON.parse(response.text);
+    }
+
+    throw new Error("No text response returned from Gemini API.");
+  } catch (error) {
+    logger.error(`Error generating Gemini daily briefing: ${error.message}`);
+    return fallbackData;
   }
 };
 
 module.exports = {
   generateChatResponse,
   generateMatchSummaryResponse,
+  generateMatchAiTimelineResponse,
+  generateDailyBriefingResponse,
   generateNewsSummaryResponse,
   generateRecommendationsResponse,
   generateNotificationsResponse,
   footballTools,
+  toolsRegistry,
+  toolHandlers,
+  executeToolCalls,
+  SYSTEM_INSTRUCTION,
 };

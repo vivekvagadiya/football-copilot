@@ -63,7 +63,6 @@ async function upsertChunkVectors(chunks = [], collectionName = DEFAULT_COLLECTI
       });
 
     if (points.length === 0) {
-      logger.warn("[QdrantService] No valid embeddings provided for upsert.");
       return false;
     }
 
@@ -72,10 +71,9 @@ async function upsertChunkVectors(chunks = [], collectionName = DEFAULT_COLLECTI
       points,
     });
 
-    logger.info(`[QdrantService] Successfully upserted ${points.length} vector points into '${collectionName}'.`);
     return true;
   } catch (error) {
-    logger.error(`[QdrantService] Error upserting chunk vectors: ${error.message}`, error);
+    logger.warn(`[QdrantService] Error upserting chunk vectors: ${error.message}`);
     return false;
   }
 }
@@ -155,8 +153,6 @@ async function searchKnowledgeVectors(
       return [];
     }
 
-    logger.info(`[QdrantService] Vector query retrieved ${results.length} chunks (top score: ${results[0]?.score?.toFixed(3)})`);
-
     return results.map((item) => ({
       _id: item.payload?.mongoChunkId || item.id,
       documentId: item.payload?.documentId,
@@ -197,10 +193,9 @@ async function deleteDocumentVectors(documentId, collectionName = DEFAULT_COLLEC
       },
     });
 
-    logger.info(`[QdrantService] Deleted vectors for documentId '${documentId}' from '${collectionName}'.`);
     return true;
   } catch (error) {
-    logger.error(`[QdrantService] Error deleting document vectors: ${error.message}`, error);
+    logger.warn(`[QdrantService] Error deleting document vectors: ${error.message}`);
     return false;
   }
 }
@@ -238,7 +233,6 @@ async function upsertUserFactVector({ memoryId, userId, fact, category, embeddin
       ],
     });
 
-    logger.info(`[QdrantService] Upserted memory point '${pointId}' for user '${userId}'.`);
     return pointId;
   } catch (error) {
     logger.warn(`[QdrantService] Failed to upsert user fact vector: ${error.message}`);
@@ -336,7 +330,6 @@ async function upsertUserEpisodicVector({ conversationId, userId, summary, keyTo
       ],
     });
 
-    logger.info(`[QdrantService] Upserted episodic memory for conv '${conversationId}'.`);
     return pointId;
   } catch (error) {
     logger.warn(`[QdrantService] Failed to upsert episodic vector: ${error.message}`);
@@ -399,7 +392,6 @@ async function clearAllUserVectors(userId) {
       qdrantClient.delete(EPISODIC_MEMORY_COLLECTION, filter),
     ]);
 
-    logger.info(`[QdrantService] Cleared all memory vectors for user '${userId}'.`);
     return true;
   } catch (error) {
     logger.error(`[QdrantService] Error clearing user vectors: ${error.message}`);

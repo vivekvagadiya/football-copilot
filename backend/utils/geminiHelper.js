@@ -1,15 +1,15 @@
 const logger = require("../config/logger");
 
-const DEFAULT_PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const DEFAULT_LITE_MODEL = process.env.GEMINI_LITE_MODEL || "gemini-2.5-flash-lite";
+const DEFAULT_PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const DEFAULT_LITE_MODEL =
+  process.env.GEMINI_LITE_MODEL || "gemini-3.5-flash-lite";
 
 // Primary and alternative fallback models
 const FALLBACK_CHAIN = [
   DEFAULT_PRIMARY_MODEL,
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
   "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-3.8-flash",
 ];
 
 /**
@@ -50,16 +50,17 @@ function isTransientOrQuotaError(err) {
  * @param {Array<string>} [options.fallbackModels] - Custom list of fallback models
  * @returns {Promise<Object>} Gemini API response object
  */
-async function generateContentWithFallback(aiClient, { model, contents, config, fallbackModels }) {
+async function generateContentWithFallback(
+  aiClient,
+  { model, contents, config, fallbackModels },
+) {
   if (!aiClient) {
     throw new Error("Google GenAI client is not initialized.");
   }
 
-  const requestedModel = model || process.env.GEMINI_MODEL || DEFAULT_PRIMARY_MODEL;
-  const modelsToTry = [
-    requestedModel,
-    ...(fallbackModels || FALLBACK_CHAIN),
-  ];
+  const requestedModel =
+    model || process.env.GEMINI_MODEL || DEFAULT_PRIMARY_MODEL;
+  const modelsToTry = [requestedModel, ...(fallbackModels || FALLBACK_CHAIN)];
 
   // Unique models list preserving order
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
@@ -69,7 +70,9 @@ async function generateContentWithFallback(aiClient, { model, contents, config, 
     const currentModel = uniqueModels[i];
     try {
       if (i > 0) {
-        logger.info(`[GeminiHelper] Attempting fallback model '${currentModel}' (strategy ${i + 1}/${uniqueModels.length})...`);
+        logger.info(
+          `[GeminiHelper] Attempting fallback model '${currentModel}' (strategy ${i + 1}/${uniqueModels.length})...`,
+        );
       }
 
       const response = await aiClient.models.generateContent({
@@ -81,10 +84,16 @@ async function generateContentWithFallback(aiClient, { model, contents, config, 
       return response;
     } catch (err) {
       lastError = err;
-      logger.warn(`[GeminiHelper] Error calling model '${currentModel}': ${err.message}`);
+      logger.warn(
+        `[GeminiHelper] Error calling model '${currentModel}': ${err.message}`,
+      );
 
       // If it's a fatal validation error unrelated to quota/concurrency/model availability, stop early
-      if (!isTransientOrQuotaError(err) && !err.message.includes("404") && !err.message.includes("not found")) {
+      if (
+        !isTransientOrQuotaError(err) &&
+        !err.message.includes("404") &&
+        !err.message.includes("not found")
+      ) {
         throw err;
       }
 
@@ -101,4 +110,5 @@ module.exports = {
   DEFAULT_LITE_MODEL,
   FALLBACK_CHAIN,
   generateContentWithFallback,
+  isTransientOrQuotaError,
 };

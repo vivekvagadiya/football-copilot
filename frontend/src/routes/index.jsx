@@ -30,6 +30,7 @@ import Settings from '../pages/core/Settings';
 import AIChat from '../pages/ai/AIChat';
 import PlannerStudio from '../pages/ai/PlannerStudio';
 import MultiAgentStudio from '../pages/ai/MultiAgentStudio';
+import AIScoutStudio from '../pages/ai/AIScoutStudio';
 import NotFound from '../pages/core/NotFound';
 
 // Route Guards
@@ -84,6 +85,8 @@ export const AppRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/ai" element={<AIChat />} />
+        <Route path="/scout" element={<AIScoutStudio />} />
+        <Route path="/ai/scout" element={<AIScoutStudio />} />
         <Route path="/planner" element={<PlannerStudio />} />
         <Route path="/ai/planner" element={<PlannerStudio />} />
         <Route path="/agents" element={<MultiAgentStudio />} />

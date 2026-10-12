@@ -20,7 +20,17 @@ const knowledgeChunkSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["tactics", "rules", "history", "scouting", "news", "general"],
+      enum: [
+        "tactics",
+        "rules",
+        "history",
+        "scouting",
+        "analytics",
+        "player_roles",
+        "transfers",
+        "news",
+        "general",
+      ],
       default: "general",
       index: true,
     },

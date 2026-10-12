@@ -9,8 +9,9 @@ import { Badge } from '../../components/ui/Badge';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { TeamLogo } from '../../components/football/TeamLogo';
-import { getMatchDetailsApi, getMatchAiSummaryApi } from '../../api/football.api';
+import { getMatchDetailsApi, getMatchAiSummaryApi, getMatchAiTimelineApi } from '../../api/football.api';
 import { AIResponseCard } from '../../components/ai/AIResponseCard';
+import { MatchAiTimeline } from '../../components/football/MatchAiTimeline';
 
 export const MatchDetails = () => {
   const { id } = useParams();
@@ -28,6 +29,13 @@ export const MatchDetails = () => {
     queryFn: () => getMatchAiSummaryApi(id),
     enabled: !!id && activeTab === 'ai-summary',
     staleTime: 5 * 60 * 1000 // Cache for 5 minutes to avoid refetching on tab switch
+  });
+
+  const { data: aiTimelineData, isLoading: isTimelineLoading } = useQuery({
+    queryKey: ['matchAiTimeline', id],
+    queryFn: () => getMatchAiTimelineApi(id),
+    enabled: !!id && activeTab === 'timeline',
+    staleTime: 60 * 1000
   });
 
   if (isLoading) {
@@ -48,7 +56,7 @@ export const MatchDetails = () => {
   const tabOptions = [
     { id: 'ai-summary', label: 'AI Match Summary' },
     { id: 'overview', label: 'Overview' },
-    { id: 'timeline', label: 'Timeline' },
+    { id: 'timeline', label: 'AI Timeline' },
     { id: 'statistics', label: 'Statistics' },
     { id: 'lineups', label: 'Lineups' }
   ];
@@ -78,8 +86,10 @@ export const MatchDetails = () => {
                 <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
               </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{homeTeam.name}</span>
-              {homeTeam.xG && (
-                <span className="text-[9px] text-muted font-mono mt-0.5">xG: {homeTeam.xG.toFixed(2)}</span>
+              {Number.isFinite(homeTeam.xG) && (
+                <span className="text-[9px] text-muted font-mono mt-0.5">
+                  xG: {homeTeam.xG.toFixed(2)} {homeTeam.isDemoEstimate && <span className="opacity-75">(Demo Est.)</span>}
+                </span>
               )}
             </div>
 
@@ -115,8 +125,10 @@ export const MatchDetails = () => {
                 <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
               </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{awayTeam.name}</span>
-              {awayTeam.xG && (
-                <span className="text-[9px] text-muted font-mono mt-0.5">xG: {awayTeam.xG.toFixed(2)}</span>
+              {Number.isFinite(awayTeam.xG) && (
+                <span className="text-[9px] text-muted font-mono mt-0.5">
+                  xG: {awayTeam.xG.toFixed(2)} {awayTeam.isDemoEstimate && <span className="opacity-75">(Demo Est.)</span>}
+                </span>
               )}
             </div>
           </div>
@@ -208,9 +220,16 @@ export const MatchDetails = () => {
                 ℹ️ Match Profile
               </h4>
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted">Home Win model</span>
-                  <span className="font-semibold text-text">{match.prediction ? `${match.prediction.homeWin}%` : '50%'}</span>
+                  <div className="flex items-center gap-1.5">
+                    {match.prediction?.isDemoEstimate && (
+                      <span className="text-[9px] px-1 py-0.2 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
+                        Demo
+                      </span>
+                    )}
+                    <span className="font-semibold text-text">{match.prediction ? `${match.prediction.homeWin}%` : '50%'}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Draw probability</span>
@@ -222,7 +241,7 @@ export const MatchDetails = () => {
                 </div>
                 <div className="border-t border-border/40 pt-3">
                   <p className="text-[10px] text-muted leading-relaxed">
-                    Statistical predictions compiled via internal tactical parameters modeling team defensive structures and expected score matrices.
+                    {match.prediction?.disclaimer || "Statistical predictions calculated via standard Poisson goal expectancy modeling with European home advantage (Demo Estimate)."}
                   </p>
                 </div>
               </div>
@@ -232,31 +251,14 @@ export const MatchDetails = () => {
 
         {/* TIMELINE TAB */}
         {activeTab === 'timeline' && (
-          <Card className="border border-border p-5 space-y-4">
-            <h4 className="font-display font-bold text-xs text-text flex items-center gap-1.5 border-b border-border/40 pb-2">
-              ⏱️ Minute-by-Minute Action Timeline
-            </h4>
-            <div className="space-y-4">
-              {events.length > 0 ? (
-                events.map((e, idx) => (
-                  <div key={idx} className="flex gap-4 text-xs py-2 border-b border-border/20 last:border-b-0 items-center">
-                    <span className="font-mono font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded shrink-0">
-                      {e.minute}'
-                    </span>
-                    <div className="flex-1">
-                      <span className="font-extrabold uppercase text-[10px] text-text mr-1.5">
-                        {e.type === 'goal' ? '⚽ GOAL' : '🟨 YELLOW CARD'}
-                      </span>
-                      <span className="font-semibold text-text">{e.player}</span>
-                      <p className="text-[10px] text-muted mt-0.5">{e.detail} {e.assist ? `• Assisted by ${e.assist}` : ''}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-muted text-center py-8">Action log is empty. This game has not kicked off.</p>
-              )}
-            </div>
-          </Card>
+          <MatchAiTimeline
+            events={events}
+            aiTimeline={aiTimelineData}
+            isLoading={isTimelineLoading}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            status={status}
+          />
         )}
 
         {/* STATISTICS TAB */}
