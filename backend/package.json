@@ -29,6 +29,7 @@
     "test:watch": "node --test --watch",
     "test:unit": "node --test tests/football.service.test.js tests/auth.validator.test.js",
     "test:integration": "node --test tests/api.routes.test.js",
-    "test:ai": "node --test tests/ai.chat.flow.test.js"
+    "test:ai": "node --test tests/ai.chat.flow.test.js",
+    "test:ratelimit": "node --test tests/rateLimiter.test.js"
   }
 }

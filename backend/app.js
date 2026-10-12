@@ -15,6 +15,12 @@ const notificationRoutes = require("./routes/notification.routes");
 const plannerRoutes = require("./routes/planner.routes");
 const multiAgentRoutes = require("./routes/multiAgent.routes");
 const scoutRoutes = require("./routes/scout.routes");
+const {
+  globalLimiter,
+  authLimiter,
+  aiLimiter,
+  footballApiLimiter,
+} = require("./middleware/rateLimiter.middleware");
 
 const getAllowedOrigins = () => {
   const allowed = new Set();
@@ -88,7 +94,9 @@ app.use(
     maxAge: 86400,
   }),
 );
-app.use(express.json());
+// Request body size limits (defends against large payload memory exhaustion)
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.url}`, {
@@ -99,13 +107,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/football", footballRoutes);
+// Global API Rate Limiter
+app.use("/api/v1", globalLimiter);
+
+// Route endpoints with dedicated rate limiters
+app.use("/api/v1/auth", authLimiter, authRoutes);
+app.use("/api/v1/football", footballApiLimiter, footballRoutes);
 app.use("/api/v1/favorites", favoriteRoutes);
-app.use("/api/v1/ai", aiRoutes);
-app.use("/api/v1/ai/scout", scoutRoutes);
-app.use("/api/v1/planner", plannerRoutes);
-app.use("/api/v1/agents", multiAgentRoutes);
+app.use("/api/v1/ai", aiLimiter, aiRoutes);
+app.use("/api/v1/ai/scout", aiLimiter, scoutRoutes);
+app.use("/api/v1/planner", aiLimiter, plannerRoutes);
+app.use("/api/v1/agents", aiLimiter, multiAgentRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 app.use((req, res) => {

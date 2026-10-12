@@ -3,11 +3,11 @@ const router = express.Router();
 const plannerController = require("../controller/planner.controller");
 const authenticate = require("../middleware/auth.middleware");
 
-// All planner endpoints require user authentication
-router.use(authenticate);
-
-// Templates & Presets
+// Public preset templates
 router.get("/templates", plannerController.getTemplatesController);
+
+// All user-specific planner endpoints require user authentication
+router.use(authenticate);
 
 // Plan Generation & List
 router.post("/generate", plannerController.createPlanController);
