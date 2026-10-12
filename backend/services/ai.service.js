@@ -887,4 +887,8 @@ module.exports = {
   generateRecommendationsResponse,
   generateNotificationsResponse,
   footballTools,
+  toolsRegistry,
+  toolHandlers,
+  executeToolCalls,
+  SYSTEM_INSTRUCTION,
 };
