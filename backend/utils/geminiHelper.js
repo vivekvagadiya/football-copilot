@@ -110,4 +110,5 @@ module.exports = {
   DEFAULT_LITE_MODEL,
   FALLBACK_CHAIN,
   generateContentWithFallback,
+  isTransientOrQuotaError,
 };
