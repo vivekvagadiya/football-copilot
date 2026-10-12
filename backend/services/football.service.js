@@ -100,9 +100,7 @@ const mapMatch = (match) => {
   let awayXG = null;
   if (!isUpcoming && homeScore !== null && awayScore !== null) {
     const idSeed =
-      typeof match.id === "number"
-        ? match.id
-        : parseInt(match.id, 10) || 1;
+      typeof match.id === "number" ? match.id : parseInt(match.id, 10) || 1;
     homeXG = parseFloat(
       (homeScore * 0.8 + 0.4 + (idSeed % 5) * 0.1).toFixed(2),
     );
@@ -220,8 +218,7 @@ const getLiveMatches = async (
     if (dFrom) params.dateFrom = dFrom;
     if (dTo) params.dateTo = dTo;
 
-    const compFilter =
-      lId || comp || DEFAULT_COMPETITIONS.join(",");
+    const compFilter = lId || comp || DEFAULT_COMPETITIONS.join(",");
     if (compFilter && compFilter !== "all") {
       params.competitions = compFilter;
     }
@@ -230,7 +227,10 @@ const getLiveMatches = async (
     const parsedOffset = off ? parseInt(off, 10) : 0;
     params.limit = 100;
 
-    console.log("Calling footballApi.get('/matches') for LIVE with params:", params);
+    console.log(
+      "Calling footballApi.get('/matches') for LIVE with params:",
+      params,
+    );
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
     console.log("live matches fetched:", rawMatches.length);
@@ -290,8 +290,6 @@ const upcomingMatches = async (
   try {
     const today = new Date();
     const rangeDays = parseInt(days, 10) || 10;
-    const dateToObj = new Date(today);
-    dateToObj.setDate(today.getDate() + rangeDays);
 
     const formatDate = (date) => {
       const yyyy = date.getFullYear();
@@ -300,11 +298,35 @@ const upcomingMatches = async (
       return `${yyyy}-${mm}-${dd}`;
     };
 
+    let defaultDateFrom;
+    let defaultDateTo;
+
+    if (status === "FINISHED") {
+      // For finished matches, look back over recent days up to today
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - rangeDays);
+      defaultDateFrom = formatDate(pastDate);
+      defaultDateTo = formatDate(today);
+    } else if (status === "all" || !status) {
+      // For full calendar, include recent past (last 4 days) + upcoming (next 5 days) within API limits
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - 4);
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 5);
+      defaultDateFrom = formatDate(pastDate);
+      defaultDateTo = formatDate(futureDate);
+    } else {
+      // For scheduled/upcoming matches, look forward from today
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + rangeDays);
+      defaultDateFrom = formatDate(today);
+      defaultDateTo = formatDate(futureDate);
+    }
+
     const params = {
-      dateFrom: dateFrom || formatDate(today),
-      dateTo: dateTo || formatDate(dateToObj),
+      dateFrom: dateFrom || defaultDateFrom,
+      dateTo: dateTo || defaultDateTo,
     };
-    console.log("params", params);
 
     const compFilter =
       leagueId || competitions || DEFAULT_COMPETITIONS.join(",");
@@ -318,8 +340,8 @@ const upcomingMatches = async (
 
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
     const parsedOffset = offset ? parseInt(offset, 10) : 0;
-    params.limit = 100;
-
+    params.limit = parsedLimit;
+    params.offset = parsedOffset;
     console.log("Calling footballApi.get('/matches') with params:", params);
     const matchesRes = await footballApi.get("/matches", { params });
     const rawMatches = matchesRes.data?.matches || [];
@@ -396,12 +418,31 @@ const playerLeaderboard = async (competition = "PL", season, limit = 20) => {
 };
 
 const getDashboardData = async (query = {}) => {
-  const { dateFrom, dateTo, league, season, competitions, limit, offset, status, leagueId, days } =
-    query;
+  const {
+    dateFrom,
+    dateTo,
+    league,
+    season,
+    competitions,
+    limit,
+    offset,
+    status,
+    leagueId,
+    days,
+  } = query;
   const [matchesRes, standingsRes, upcomingRes, playerRes] = await Promise.all([
     getLiveMatches(),
     getStanding(league || "PL", season),
-    upcomingMatches(dateFrom, dateTo, competitions, limit, offset, status, leagueId, days),
+    upcomingMatches(
+      dateFrom,
+      dateTo,
+      competitions,
+      limit,
+      offset,
+      status,
+      leagueId,
+      days,
+    ),
     playerLeaderboard(league || "PL", season),
   ]);
   return {
@@ -532,6 +573,59 @@ const getMatchSummary = async (matchId) => {
   }
 
   return cachedSummary;
+};
+
+const getMatchAiTimeline = async (matchId) => {
+  let cachedSummary = await MatchSummary.findOne({ matchId });
+  const now = new Date();
+
+  // If match finished and timeline exists, return immediately from cache
+  if (
+    cachedSummary &&
+    cachedSummary.status === "FINISHED" &&
+    cachedSummary.aiTimeline
+  ) {
+    return cachedSummary.aiTimeline;
+  }
+
+  const isStale =
+    !cachedSummary ||
+    !cachedSummary.aiTimeline ||
+    cachedSummary.status === "LIVE" ||
+    (now - new Date(cachedSummary.lastUpdated)) / 1000 > 60;
+
+  if (isStale) {
+    try {
+      const matchDetails = await getMatchDetails(matchId);
+      if (matchDetails) {
+        const aiService = require("./ai.service");
+        const timelineData =
+          await aiService.generateMatchAiTimelineResponse(matchDetails);
+
+        if (!cachedSummary) {
+          cachedSummary = new MatchSummary({
+            matchId,
+            status: matchDetails.status,
+            aiTimeline: timelineData,
+            lastUpdated: now,
+          });
+        } else {
+          cachedSummary.status = matchDetails.status;
+          cachedSummary.aiTimeline = timelineData;
+          cachedSummary.lastUpdated = now;
+        }
+        await cachedSummary.save();
+        return timelineData;
+      }
+    } catch (err) {
+      console.error(
+        `Error generating or saving AI Match Timeline for ID ${matchId}:`,
+        err,
+      );
+    }
+  }
+
+  return cachedSummary?.aiTimeline || null;
 };
 
 const getCompetation = async () => {
@@ -921,6 +1015,7 @@ module.exports = {
   getPlayerDetails,
   getTeamDetails,
   getMatchSummary,
+  getMatchAiTimeline,
   searchPlayers,
   searchLeagues,
   searchTeams,

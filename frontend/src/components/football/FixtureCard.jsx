@@ -38,9 +38,13 @@ export const FixtureCard = ({ match }) => {
       {/* Time & League */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col items-center justify-center border-r border-border pr-3 min-w-[75px]">
-          {status === "live" ? (
+          {status === "LIVE" || status === "live" ? (
             <span className="text-xs text-red-500 font-extrabold animate-pulse uppercase">
               Live {minute}'
+            </span>
+          ) : status === "FINISHED" || status === "finished" ? (
+            <span className="text-[11px] text-primary/90 font-bold uppercase">
+              FT
             </span>
           ) : (
             <span className="text-xs text-muted font-semibold">{date}</span>
@@ -71,8 +75,8 @@ export const FixtureCard = ({ match }) => {
             <span className="text-sm font-semibold text-text group-hover:text-primary transition-colors">
               {homeTeam?.name}
             </span>
-            {match.status !== "upcoming" && (
-              <span className="text-sm font-bold ml-auto">
+            {homeTeam?.score !== null && homeTeam?.score !== undefined && (
+              <span className="text-sm font-bold ml-auto text-text">
                 {homeTeam?.score}
               </span>
             )}
@@ -87,8 +91,8 @@ export const FixtureCard = ({ match }) => {
             <span className="text-sm font-semibold text-text group-hover:text-primary transition-colors">
               {awayTeam?.name}
             </span>
-            {match.status !== "upcoming" && (
-              <span className="text-sm font-bold ml-auto">
+            {awayTeam?.score !== null && awayTeam?.score !== undefined && (
+              <span className="text-sm font-bold ml-auto text-text">
                 {awayTeam?.score}
               </span>
             )}

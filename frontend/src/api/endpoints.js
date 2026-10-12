@@ -35,6 +35,8 @@ const endpoints = {
   ai: {
     chat: "/ai/chat",
     recommendations: "/ai/recommendations",
+    dailyBriefing: "/ai/daily-briefing",
+    suggestions: "/ai/suggestions",
     ragQuery: "/ai/rag/query",
     ragDocuments: "/ai/rag/documents",
     ragDocumentById: (id) => `/ai/rag/documents/${id}`,
@@ -63,6 +65,11 @@ const endpoints = {
     markRead: (id) => `/notifications/${id}/read`,
     markAllRead: "/notifications/read-all",
     generate: "/notifications/generate",
+  },
+  scout: {
+    report: "/ai/scout/report",
+    similar: "/ai/scout/similar",
+    tacticalFit: "/ai/scout/tactical-fit",
   },
 };
 

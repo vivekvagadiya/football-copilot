@@ -4,7 +4,7 @@ import { Zap, ArrowRight } from "lucide-react";
 import { ScoreCard } from "../football/ScoreCard";
 import { Card } from "../ui/Card";
 
-export const DashboardLiveMatches = ({ liveMatches = [] }) => {
+export const DashboardLiveMatches = ({ liveMatches = [], isLoading = false }) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
@@ -18,14 +18,19 @@ export const DashboardLiveMatches = ({ liveMatches = [] }) => {
           View all <ArrowRight size={12} />
         </Link>
       </div>
-      {liveMatches.length > 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-28 rounded-xl bg-card/60 border border-border/40 animate-pulse" />
+          <div className="h-28 rounded-xl bg-card/60 border border-border/40 animate-pulse" />
+        </div>
+      ) : liveMatches.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {liveMatches.map((m) => (
             <ScoreCard key={m.id} match={m} />
           ))}
         </div>
       ) : (
-        <Card className="text-center py-8 text-xs text-muted border-dashed border-border">
+        <Card className="text-center py-6 text-xs text-muted border-dashed border-border">
           No matches live right now. Check back during match hours.
         </Card>
       )}

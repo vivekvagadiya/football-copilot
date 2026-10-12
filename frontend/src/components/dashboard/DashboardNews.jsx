@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import { Newspaper, ArrowRight } from "lucide-react";
 import { Card } from "../ui/Card";
 
-export const DashboardNews = ({ news = [], onSelectNews }) => {
+export const DashboardNews = ({
+  news = [],
+  onSelectNews,
+  isLoading = false,
+}) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
@@ -17,32 +21,43 @@ export const DashboardNews = ({ news = [], onSelectNews }) => {
           More news <ArrowRight size={12} />
         </Link>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {news.slice(0, 8).map((n) => (
-          <Card
-            key={n.id}
-            onClick={() => onSelectNews(n)}
-            className="cursor-pointer hover:border-primary/20 transition-all flex gap-4 p-4 items-start"
-          >
-            <img
-              src={n.image}
-              alt={n.title}
-              className="w-16 h-16 object-cover rounded-lg shrink-0 border border-border"
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-24 rounded-xl bg-card/60 border border-border/40 animate-pulse"
             />
-            <div className="space-y-1 min-w-0">
-              <span className="text-[9px] text-primary font-bold uppercase">
-                {n.date}
-              </span>
-              <h4 className="font-semibold text-text text-xs leading-snug line-clamp-2">
-                {n.title}
-              </h4>
-              <p className="text-[10px] text-muted line-clamp-1">
-                {n.summary}
-              </p>
-            </div>
-          </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {news.slice(0, 6).map((n) => (
+            <Card
+              key={n.id}
+              onClick={() => onSelectNews(n)}
+              className="cursor-pointer hover:border-primary/20 transition-all flex gap-4 p-4 items-start"
+            >
+              <img
+                src={n.image}
+                alt={n.title}
+                className="w-16 h-16 object-cover rounded-lg shrink-0 border border-border"
+              />
+              <div className="space-y-1 min-w-0">
+                <span className="text-[9px] text-primary font-bold uppercase">
+                  {n.date}
+                </span>
+                <h4 className="font-semibold text-text text-xs leading-snug line-clamp-2">
+                  {n.title}
+                </h4>
+                <p className="text-[10px] text-muted line-clamp-1">
+                  {n.summary}
+                </p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

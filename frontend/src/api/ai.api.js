@@ -25,6 +25,28 @@ export const getAiRecommendationsApi = async () => {
   }
 };
 
+export const getDailyBriefingApi = async () => {
+  try {
+    const response = await axiosInstance.get(endpoints.ai.dailyBriefing);
+    return response?.data?.data || null;
+  } catch (error) {
+    throw error?.errors?.[0] || error;
+  }
+};
+
+export const getAiSuggestionsApi = async (params = {}) => {
+  try {
+    const response = await axiosInstance.get(endpoints.ai.suggestions, {
+      params,
+    });
+    return response?.data?.data || [];
+  } catch (error) {
+    console.warn("Failed to fetch dynamic suggestions from API, using fallback:", error);
+    return [];
+  }
+};
+
+
 export const sendRagQueryApi = async ({
   query,
   history = [],
@@ -118,7 +140,7 @@ export const createAiConversationApi = async (data = {}) => {
 /**
  * Send user message to conversation: executes AI/RAG, recalls memory, and persists turns
  */
-export const sendMessageToAiConversationApi = async (id, { prompt, isRag = true, category, useMemory = true }) => {
+export const sendMessageToAiConversationApi = async (id, { prompt, isRag = false, category, useMemory = true }) => {
   try {
     const url =
       typeof endpoints?.ai?.conversationMessages === "function"
