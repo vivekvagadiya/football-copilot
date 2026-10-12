@@ -8,9 +8,9 @@ describe("Critical API Routes & Middlewares Integration", () => {
   let baseUrl;
 
   before((done) => {
-    // Spin up server on an ephemeral port
+    // Spin up server on an ephemeral port explicitly on 127.0.0.1
     server = http.createServer(app);
-    server.listen(0, () => {
+    server.listen(0, "127.0.0.1", () => {
       const port = server.address().port;
       baseUrl = `http://127.0.0.1:${port}`;
       done();
@@ -42,6 +42,31 @@ describe("Critical API Routes & Middlewares Integration", () => {
         res.headers.get("x-dns-prefetch-control") === "off" ||
         res.headers.get("x-download-options") === "noopen"
       );
+    });
+
+    it("should allow configured origins and set CORS headers", async () => {
+      const res = await fetch(`${baseUrl}/api/v1/planner/templates`, {
+        headers: {
+          Origin: "http://localhost:5173",
+        },
+      });
+
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("access-control-allow-origin"), "http://localhost:5173");
+      assert.equal(res.headers.get("access-control-allow-credentials"), "true");
+    });
+
+    it("should reject disallowed cross-origin requests with 403 Forbidden", async () => {
+      const res = await fetch(`${baseUrl}/api/v1/planner/templates`, {
+        headers: {
+          Origin: "https://malicious-unauthorized-site.com",
+        },
+      });
+
+      assert.equal(res.status, 403);
+      const body = await res.json();
+      assert.equal(body.success, false);
+      assert.ok(body.message.includes("CORS"));
     });
   });
 

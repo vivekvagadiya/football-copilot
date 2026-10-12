@@ -53,8 +53,11 @@ function sanitizeErrorMessage(rawMessage) {
 }
 
 const errorHandler = (err, req, res, next) => {
-  logger.error(err.stack, {
-    url: req.url,
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Always log the full stack trace server-side
+  logger.error(err.stack || err.message, {
+    url: req.originalUrl || req.url,
     method: req.method,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
@@ -63,22 +66,46 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || err.status || 500;
   let rawMessage = err.message || "Internal Server Error";
 
-  if (err.name === "TokenExpiredError" || rawMessage === "jwt expired") {
+  // 1. CORS Policy Violation
+  if (rawMessage.includes("CORS") || err.name === "CorsError") {
+    statusCode = 403;
+    rawMessage = "CORS policy blocked access from this origin.";
+  }
+  // 2. JWT Authentication Errors
+  else if (err.name === "TokenExpiredError" || rawMessage === "jwt expired") {
     statusCode = 401;
     rawMessage = "Your session has expired.";
   } else if (err.name === "JsonWebTokenError") {
     statusCode = 401;
     rawMessage = "Invalid authentication token. Please log in again.";
-  } else if (rawMessage.includes("429") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
+  }
+  // 3. Mongoose Validation / Cast Errors
+  else if (err.name === "CastError") {
+    statusCode = 400;
+    rawMessage = "Invalid resource identifier format.";
+  } else if (err.code === 11000) {
+    statusCode = 409;
+    rawMessage = "A record with these details already exists.";
+  } else if (err.name === "ValidationError") {
+    statusCode = 400;
+    rawMessage = "Validation failed. Please verify submitted fields.";
+  }
+  // 4. Rate Limits & Quota
+  else if (rawMessage.includes("429") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
     statusCode = 429;
   }
 
-  const cleanMessage = sanitizeErrorMessage(rawMessage);
+  // Sanitize message: In production, mask unhandled 500 internal errors
+  let cleanMessage = sanitizeErrorMessage(rawMessage);
+  if (statusCode >= 500 && isProduction) {
+    cleanMessage = "An unexpected server error occurred. Please try again later.";
+  }
 
   res.status(statusCode).json({
     success: false,
     message: cleanMessage,
-    errors: err.errors || [],
+    errors: err.errors || null,
+    timestamp: new Date().toISOString(),
   });
 };
 

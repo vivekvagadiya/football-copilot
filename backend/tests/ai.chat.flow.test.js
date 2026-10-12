@@ -20,7 +20,7 @@ describe("AI Chat Flow Verification - End-to-End Suite", () => {
 
   before((done) => {
     server = http.createServer(app);
-    server.listen(0, () => {
+    server.listen(0, "127.0.0.1", () => {
       const port = server.address().port;
       baseUrl = `http://127.0.0.1:${port}`;
       done();
@@ -59,20 +59,27 @@ describe("AI Chat Flow Verification - End-to-End Suite", () => {
     });
 
     it("should execute registered tool handlers successfully via executeToolCalls", async () => {
-      const functionCalls = [
-        {
-          name: "getStanding",
-          args: { leagueCode: "PL" },
-        },
-      ];
+      const origHandler = toolHandlers.getStanding;
+      toolHandlers.getStanding = async (args) => [{ team: "Arsenal", position: 1 }];
 
-      const results = await executeToolCalls(functionCalls);
+      try {
+        const functionCalls = [
+          {
+            name: "getStanding",
+            args: { leagueCode: "PL" },
+          },
+        ];
 
-      assert.equal(results.length, 1);
-      assert.ok(results[0].functionResponse);
-      assert.equal(results[0].functionResponse.name, "getStanding");
-      // The standing handler returns an array (from API or fallback)
-      assert.ok(Array.isArray(results[0].functionResponse.response.result));
+        const results = await executeToolCalls(functionCalls);
+
+        assert.equal(results.length, 1);
+        assert.ok(results[0].functionResponse);
+        assert.equal(results[0].functionResponse.name, "getStanding");
+        assert.ok(Array.isArray(results[0].functionResponse.response.result));
+        assert.equal(results[0].functionResponse.response.result[0].team, "Arsenal");
+      } finally {
+        toolHandlers.getStanding = origHandler;
+      }
     });
 
     it("should gracefully handle unregistered tool requests without crashing", async () => {
@@ -114,18 +121,25 @@ describe("AI Chat Flow Verification - End-to-End Suite", () => {
     });
 
     it("should execute multiple parallel tool calls in a single turn", async () => {
-      const functionCalls = [
-        { name: "getStanding", args: { leagueCode: "PL" } },
-        { name: "getStanding", args: { leagueCode: "PD" } },
-      ];
+      const origHandler = toolHandlers.getStanding;
+      toolHandlers.getStanding = async (args) => [{ league: args.leagueCode }];
 
-      const results = await executeToolCalls(functionCalls);
+      try {
+        const functionCalls = [
+          { name: "getStanding", args: { leagueCode: "PL" } },
+          { name: "getStanding", args: { leagueCode: "PD" } },
+        ];
 
-      assert.equal(results.length, 2);
-      assert.equal(results[0].functionResponse.name, "getStanding");
-      assert.equal(results[1].functionResponse.name, "getStanding");
-      assert.ok(Array.isArray(results[0].functionResponse.response.result));
-      assert.ok(Array.isArray(results[1].functionResponse.response.result));
+        const results = await executeToolCalls(functionCalls);
+
+        assert.equal(results.length, 2);
+        assert.equal(results[0].functionResponse.name, "getStanding");
+        assert.equal(results[1].functionResponse.name, "getStanding");
+        assert.ok(Array.isArray(results[0].functionResponse.response.result));
+        assert.ok(Array.isArray(results[1].functionResponse.response.result));
+      } finally {
+        toolHandlers.getStanding = origHandler;
+      }
     });
   });
 

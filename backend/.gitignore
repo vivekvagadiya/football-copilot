@@ -3,8 +3,14 @@ node_modules/
 /node_modules
 /build
 .env
+.env.*
+.env.local
+.env.production
+!.env.example
 .vscode
 .log
 /logs
 logs/
 qdrant_storage/
+*.pem
+*.key
