@@ -18,13 +18,13 @@ describe("AI Chat Flow Verification - End-to-End Suite", () => {
   let server;
   let baseUrl;
 
-  before((done) => {
+  before(async () => {
     server = http.createServer(app);
-    server.listen(0, "127.0.0.1", () => {
-      const port = server.address().port;
-      baseUrl = `http://127.0.0.1:${port}`;
-      done();
+    await new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
     });
+    const port = server.address().port;
+    baseUrl = `http://127.0.0.1:${port}`;
   });
 
   after(async () => {

@@ -9,13 +9,13 @@ describe("Rate Limiting, Abuse Protection & Security Boundaries", () => {
   let server;
   let baseUrl;
 
-  before((done) => {
+  before(async () => {
     server = http.createServer(app);
-    server.listen(0, "127.0.0.1", () => {
-      const port = server.address().port;
-      baseUrl = `http://127.0.0.1:${port}`;
-      done();
+    await new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
     });
+    const port = server.address().port;
+    baseUrl = `http://127.0.0.1:${port}`;
   });
 
   after(async () => {
@@ -153,7 +153,7 @@ describe("Rate Limiting, Abuse Protection & Security Boundaries", () => {
 
       const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Forwarded-For": "10.99.2.1" },
         body: largePayload,
       });
 
@@ -165,7 +165,7 @@ describe("Rate Limiting, Abuse Protection & Security Boundaries", () => {
 
       const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Forwarded-For": "10.99.2.2" },
         body: normalPayload,
       });
 
@@ -175,29 +175,43 @@ describe("Rate Limiting, Abuse Protection & Security Boundaries", () => {
   });
 
   describe("3. File Upload MIME Filter & Boundaries", () => {
-    it("should reject non-image file uploads in multer avatar upload", (done) => {
+    it("should reject non-image file uploads in multer avatar upload", async () => {
       const mockFile = {
         mimetype: "application/pdf",
         originalname: "malicious.pdf",
       };
 
-      upload.single("avatar")({ file: mockFile, body: {}, headers: {} }, {}, (err) => {
-        assert.ok(err, "Should return an error for non-image file");
-        assert.ok(err.message.includes("Only JPEG, PNG, and WebP images are allowed"));
-        assert.equal(err.statusCode, 400);
-        done();
+      await new Promise((resolve, reject) => {
+        upload.fileFilter({}, mockFile, (err, accepted) => {
+          try {
+            assert.ok(err, "Should return an error for non-image file");
+            assert.ok(err.message.includes("Only JPEG, PNG, and WebP images are allowed"));
+            assert.equal(err.statusCode, 400);
+            assert.equal(accepted, false);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
       });
     });
 
-    it("should accept valid image MIME types in multer avatar upload", (done) => {
+    it("should accept valid image MIME types in multer avatar upload", async () => {
       const mockFile = {
         mimetype: "image/png",
         originalname: "avatar.png",
       };
 
-      upload.single("avatar")({ file: mockFile, body: {}, headers: {} }, {}, (err) => {
-        assert.equal(err, undefined);
-        done();
+      await new Promise((resolve, reject) => {
+        upload.fileFilter({}, mockFile, (err, accepted) => {
+          try {
+            assert.equal(err, null);
+            assert.equal(accepted, true);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
       });
     });
   });
@@ -207,7 +221,7 @@ describe("Rate Limiting, Abuse Protection & Security Boundaries", () => {
       const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "test@example.com", password: "pwd" }),
+        body: JSON.stringify({ email: "invalid-email", password: "pwd" }),
       });
 
       assert.ok(res.headers.get("x-ratelimit-limit"));

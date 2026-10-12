@@ -94,11 +94,13 @@ const getTeamRating = (team) => {
   const rawName = (team.shortName || team.name || "").toLowerCase().trim();
   const cleanName = rawName.replace(/\b(fc|cf|afc|sc|bsc)\b/g, "").trim();
 
+  if (!cleanName && !rawName) return 1600;
+
   if (KNOWN_CLUB_RATINGS[cleanName]) return KNOWN_CLUB_RATINGS[cleanName];
   if (KNOWN_CLUB_RATINGS[rawName]) return KNOWN_CLUB_RATINGS[rawName];
 
   for (const [key, rating] of Object.entries(KNOWN_CLUB_RATINGS)) {
-    if (cleanName.includes(key) || key.includes(cleanName)) {
+    if (cleanName.includes(key) || (cleanName.length >= 4 && key.includes(cleanName))) {
       return rating;
     }
   }
