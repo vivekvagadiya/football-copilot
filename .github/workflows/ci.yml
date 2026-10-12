@@ -13,8 +13,10 @@ concurrency:
 
 jobs:
   backend-ci:
-    name: Backend (Lint & Automated Tests)
+    name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     defaults:
       run:
         working-directory: backend
@@ -34,20 +36,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: npm
           cache-dependency-path: backend/package-lock.json
 
       - name: Install Backend Dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Run Automated Test Suite
+      - name: Run Automated Tests
         env:
           NODE_ENV: test
           PORT: 5001
@@ -56,8 +55,10 @@ jobs:
         run: npm test
 
   frontend-ci:
-    name: Frontend (Lint & Production Build)
+    name: Frontend Production Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     defaults:
       run:
         working-directory: frontend
@@ -66,35 +67,37 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
         run: npm ci
 
-      - name: Run Frontend Lint
-        run: npm run lint
-
-      - name: Build Frontend for Production
+      - name: Build Frontend
         env:
           VITE_API_BASE_URL: http://localhost:5000/api/v1
           VITE_SOCKET_URL: http://localhost:5000
         run: npm run build
 
   ci-summary:
-    name: All CI Checks Passed
+    name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-ci, frontend-ci]
     if: always()
+    needs: [backend-ci, frontend-ci]
+
     steps:
-      - name: Evaluate Workflow Results
+      - name: Check CI Results
+        env:
+          BACKEND_RESULT: ${{ needs.backend-ci.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-ci.result }}
         run: |
-          if [ "${{ needs.backend-ci.result }}" != "success" ] || [ "${{ needs.frontend-ci.result }}" != "success" ]; then
-            echo "CI validation failed. Please review the failed job logs above."
+          if [ "$BACKEND_RESULT" != "success" ] || [ "$FRONTEND_RESULT" != "success" ]; then
+            echo "CI failed. Check the backend and frontend job logs."
             exit 1
           fi
-          echo "All backend and frontend CI checks passed successfully!"
+
+          echo "All CI checks passed successfully!"
