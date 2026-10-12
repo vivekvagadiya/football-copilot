@@ -27,11 +27,15 @@ describe("AI Chat Flow Verification - End-to-End Suite", () => {
     });
   });
 
-  after((done) => {
+  after(async () => {
     if (server) {
-      server.close(done);
-    } else {
-      done();
+      await new Promise((resolve) => server.close(resolve));
+    }
+    const redisClient = require("../config/redis");
+    if (redisClient) {
+      try {
+        await redisClient.disconnect();
+      } catch (_) {}
     }
   });
 
