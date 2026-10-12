@@ -12,6 +12,7 @@
 [![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.5%20%7C%202.0-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI](https://github.com/vivekvagadiya/football-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekvagadiya/football-copilot/actions/workflows/ci.yml)
 
 ---
 
@@ -350,7 +351,23 @@ npm run test:integration
 
 # AI chat flow verification: Tool calling, RAG retrieval, context injection, and fallbacks
 npm run test:ai
+
+# Rate limiting & abuse protection verification
+npm run test:ratelimit
 ```
+
+### Continuous Integration (CI Pipeline)
+
+The repository features an automated GitHub Actions CI workflow ([`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml)) configured to run on all pull requests and pushes to main/development branches:
+
+- **Backend CI**:
+  - Spins up a dedicated Redis 7 Alpine service container.
+  - Verifies code style via ESLint (`npm run lint`).
+  - Executes the full automated test suite (`npm test`).
+- **Frontend CI**:
+  - Verifies frontend scripts (`npm run lint`).
+  - Compiles full production bundle via Vite (`npm run build`).
+- **Status Evaluation**: A unified `ci-summary` status check ensures all sub-jobs pass before allowing pull request merges.
 
 ---
 
