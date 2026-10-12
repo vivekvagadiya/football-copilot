@@ -86,8 +86,10 @@ export const MatchDetails = () => {
                 <TeamLogo logo={homeTeam.logo} name={homeTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
               </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{homeTeam.name}</span>
-              {homeTeam.xG && (
-                <span className="text-[9px] text-muted font-mono mt-0.5">xG: {homeTeam.xG.toFixed(2)}</span>
+              {Number.isFinite(homeTeam.xG) && (
+                <span className="text-[9px] text-muted font-mono mt-0.5">
+                  xG: {homeTeam.xG.toFixed(2)} {homeTeam.isDemoEstimate && <span className="opacity-75">(Demo Est.)</span>}
+                </span>
               )}
             </div>
 
@@ -123,8 +125,10 @@ export const MatchDetails = () => {
                 <TeamLogo logo={awayTeam.logo} name={awayTeam.name} className="w-12 h-12" fallbackSize="text-4xl" />
               </div>
               <span className="font-display font-bold text-sm sm:text-base text-text truncate w-full">{awayTeam.name}</span>
-              {awayTeam.xG && (
-                <span className="text-[9px] text-muted font-mono mt-0.5">xG: {awayTeam.xG.toFixed(2)}</span>
+              {Number.isFinite(awayTeam.xG) && (
+                <span className="text-[9px] text-muted font-mono mt-0.5">
+                  xG: {awayTeam.xG.toFixed(2)} {awayTeam.isDemoEstimate && <span className="opacity-75">(Demo Est.)</span>}
+                </span>
               )}
             </div>
           </div>
@@ -216,9 +220,16 @@ export const MatchDetails = () => {
                 ℹ️ Match Profile
               </h4>
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted">Home Win model</span>
-                  <span className="font-semibold text-text">{match.prediction ? `${match.prediction.homeWin}%` : '50%'}</span>
+                  <div className="flex items-center gap-1.5">
+                    {match.prediction?.isDemoEstimate && (
+                      <span className="text-[9px] px-1 py-0.2 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
+                        Demo
+                      </span>
+                    )}
+                    <span className="font-semibold text-text">{match.prediction ? `${match.prediction.homeWin}%` : '50%'}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Draw probability</span>
@@ -230,7 +241,7 @@ export const MatchDetails = () => {
                 </div>
                 <div className="border-t border-border/40 pt-3">
                   <p className="text-[10px] text-muted leading-relaxed">
-                    Statistical predictions compiled via internal tactical parameters modeling team defensive structures and expected score matrices.
+                    {match.prediction?.disclaimer || "Statistical predictions calculated via standard Poisson goal expectancy modeling with European home advantage (Demo Estimate)."}
                   </p>
                 </div>
               </div>

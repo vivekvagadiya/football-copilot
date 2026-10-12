@@ -88,9 +88,14 @@ export const ScoreCard = ({ match }) => {
       </div>
 
       {/* xG details if live/finished */}
-      {!isUpcoming && (homeTeam.xG !== undefined && awayTeam.xG !== undefined) && (
+      {!isUpcoming && Number.isFinite(homeTeam.xG) && Number.isFinite(awayTeam.xG) && (
         <div className="flex items-center justify-between text-[10px] text-muted border-t border-border/40 pt-2 bg-background/20 px-2 rounded">
-          <span>Expected Goals (xG)</span>
+          <span>
+            Expected Goals (xG)
+            {(homeTeam.isDemoEstimate || awayTeam.isDemoEstimate) && (
+              <span className="text-[9px] text-amber-500/90 font-normal ml-1">(Demo Est.)</span>
+            )}
+          </span>
           <span className="font-semibold text-text">
             {homeTeam.xG.toFixed(2)} - {awayTeam.xG.toFixed(2)}
           </span>
@@ -102,6 +107,9 @@ export const ScoreCard = ({ match }) => {
         <div className="text-[10px] text-muted border-t border-border/40 pt-2 space-y-1">
           <div className="flex justify-between font-medium">
             <span>Home Win: {match.prediction.homeWin}%</span>
+            {match.prediction.isDemoEstimate && (
+              <span className="text-[9px] text-amber-500/90 font-normal">Demo Model</span>
+            )}
             <span>Away: {match.prediction.awayWin}%</span>
           </div>
           <div className="w-full h-1 bg-border/45 rounded-full overflow-hidden flex">

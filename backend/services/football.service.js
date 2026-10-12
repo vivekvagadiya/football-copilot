@@ -27,6 +27,231 @@ const formatMatchDate = (utcDateStr) => {
   }
 };
 
+// Baseline club power rankings / Elo ratings for European football teams
+// Used in the Poisson goal expectancy model when live bookmaker odds are unavailable
+const KNOWN_CLUB_RATINGS = {
+  // Premier League
+  "manchester city": 1960, "man city": 1960, "mancity": 1960,
+  "arsenal": 1930,
+  "liverpool": 1920,
+  "chelsea": 1810,
+  "tottenham": 1800, "tottenham hotspur": 1800, "spurs": 1800,
+  "manchester united": 1780, "man united": 1780, "man utd": 1780,
+  "aston villa": 1800,
+  "newcastle": 1790, "newcastle united": 1790,
+  "brighton": 1740, "brighton & hove albion": 1740,
+  "west ham": 1710, "west ham united": 1710,
+  "crystal palace": 1670,
+  "fulham": 1680,
+  "brentford": 1670,
+  "bournemouth": 1660,
+  "everton": 1650,
+  "wolverhampton": 1660, "wolves": 1660,
+  "nottingham forest": 1670, "nott'm forest": 1670,
+  "ipswich": 1580, "ipswich town": 1580,
+  "leicester": 1620, "leicester city": 1620,
+  "southampton": 1590,
+
+  // La Liga
+  "real madrid": 1980,
+  "barcelona": 1920,
+  "atletico madrid": 1840, "atlético madrid": 1840,
+  "athletic club": 1780, "athletic bilbao": 1780,
+  "real sociedad": 1760,
+  "villarreal": 1750,
+  "girona": 1740,
+  "real betis": 1730, "betis": 1730,
+  "sevilla": 1710,
+
+  // Bundesliga
+  "bayern münchen": 1940, "bayern munich": 1940, "bayern": 1940,
+  "bayer leverkusen": 1900, "leverkusen": 1900,
+  "borussia dortmund": 1830, "dortmund": 1830,
+  "rb leipzig": 1820, "leipzig": 1820,
+  "eintracht frankfurt": 1740, "frankfurt": 1740,
+  "stuttgart": 1750, "vfb stuttgart": 1750,
+
+  // Serie A
+  "inter": 1900, "inter milan": 1900, "internazionale": 1900,
+  "juventus": 1840,
+  "milan": 1830, "ac milan": 1830,
+  "atalanta": 1820,
+  "napoli": 1830,
+  "roma": 1760, "as roma": 1760,
+  "lazio": 1760,
+  "fiorentina": 1730,
+
+  // Ligue 1
+  "paris saint-germain": 1910, "psg": 1910,
+  "monaco": 1770, "as monaco": 1770,
+  "marseille": 1760, "olympique marseille": 1760,
+  "lille": 1750,
+  "lyon": 1730, "olympique lyonnais": 1730,
+};
+
+const getTeamRating = (team) => {
+  if (!team) return 1600;
+  const rawName = (team.shortName || team.name || "").toLowerCase().trim();
+  const cleanName = rawName.replace(/\b(fc|cf|afc|sc|bsc)\b/g, "").trim();
+
+  if (KNOWN_CLUB_RATINGS[cleanName]) return KNOWN_CLUB_RATINGS[cleanName];
+  if (KNOWN_CLUB_RATINGS[rawName]) return KNOWN_CLUB_RATINGS[rawName];
+
+  for (const [key, rating] of Object.entries(KNOWN_CLUB_RATINGS)) {
+    if (cleanName.includes(key) || key.includes(cleanName)) {
+      return rating;
+    }
+  }
+
+  return 1600; // Baseline average European top-flight rating
+};
+
+// Factorial lookup for Poisson distribution (0-8 goals)
+const FACTORIALS = [1, 1, 2, 6, 24, 120, 720, 5040, 40320];
+const poisson = (k, lambda) => {
+  if (k < 0 || k > 8) return 0;
+  return (Math.pow(lambda, k) * Math.exp(-lambda)) / (FACTORIALS[k] || 1);
+};
+
+// Calculate win, draw, away probabilities using a standard bivariate Poisson goal expectancy model
+const calculateWinProbabilities = (match, homeTeam, awayTeam) => {
+  // 1. If provider supplies live match odds, derive implied market probabilities
+  if (match.odds?.homeWin && match.odds?.awayWin) {
+    const rawH = 1 / match.odds.homeWin;
+    const rawD = match.odds.draw ? 1 / match.odds.draw : 0.26;
+    const rawA = 1 / match.odds.awayWin;
+    const sum = rawH + rawD + rawA;
+    const homeWin = Math.round((rawH / sum) * 100);
+    const awayWin = Math.round((rawA / sum) * 100);
+    const draw = Math.max(0, 100 - homeWin - awayWin);
+    return {
+      homeWin,
+      draw,
+      awayWin,
+      isDemoEstimate: false,
+      model: "Market Odds Implied Probability",
+      label: "Official Market Odds",
+      disclaimer: "Implied probability derived from match odds (overround normalized).",
+    };
+  }
+
+  // 2. Otherwise use a calibrated bivariate Poisson model with European home advantage
+  const homeRating = getTeamRating(homeTeam);
+  const awayRating = getTeamRating(awayTeam);
+
+  // European baseline home advantage: +75 Elo points (~+0.30 expected goal advantage)
+  const HOME_ADVANTAGE = 75;
+  const ratingDelta = (homeRating + HOME_ADVANTAGE) - awayRating;
+
+  // Logistic goal ratio scaling
+  const strengthRatio = Math.pow(10, ratingDelta / 600);
+
+  // European baseline expected goals: ~1.45 home vs ~1.15 away
+  const homeLambda = Math.min(3.8, Math.max(0.4, 1.45 * ((2 * strengthRatio) / (strengthRatio + 1))));
+  const awayLambda = Math.min(3.8, Math.max(0.4, 1.15 * (2 / (strengthRatio + 1))));
+
+  let homeWinP = 0;
+  let drawP = 0;
+  let awayWinP = 0;
+
+  for (let h = 0; h <= 8; h++) {
+    const pH = poisson(h, homeLambda);
+    for (let a = 0; a <= 8; a++) {
+      const pJoint = pH * poisson(a, awayLambda);
+      if (h > a) {
+        homeWinP += pJoint;
+      } else if (h === a) {
+        drawP += pJoint;
+      } else {
+        awayWinP += pJoint;
+      }
+    }
+  }
+
+  const total = homeWinP + drawP + awayWinP || 1;
+  const homePercent = Math.round((homeWinP / total) * 100);
+  const awayPercent = Math.round((awayWinP / total) * 100);
+  const drawPercent = Math.max(0, 100 - homePercent - awayPercent);
+
+  return {
+    homeWin: homePercent,
+    draw: drawPercent,
+    awayWin: awayPercent,
+    expectedGoals: {
+      home: parseFloat(homeLambda.toFixed(2)),
+      away: parseFloat(awayLambda.toFixed(2)),
+    },
+    isDemoEstimate: true,
+    model: "Bivariate Poisson Goal Expectancy",
+    label: "Demo Estimate",
+    disclaimer: "Demo estimate: Model-based statistical simulation. Official bookmaker or Opta tracking feeds are not connected.",
+  };
+};
+
+// Resolve xG: Prioritize official provider tracking stats if present;
+// otherwise calculate a chance-quality heuristic model clearly labeled as demo estimate.
+const resolveExpectedGoals = (match, homeScore, awayScore, isUpcoming, minute) => {
+  if (isUpcoming) {
+    return {
+      homeXG: null,
+      awayXG: null,
+      isDemoEstimate: false,
+      source: null,
+      label: null,
+    };
+  }
+
+  // 1. Check for genuine provider xG if available from raw match or stats
+  const providerHomeXG =
+    match.homeTeam?.xG ??
+    match.stats?.expectedGoals?.home ??
+    match.stats?.xG?.home ??
+    match.xG?.home;
+  const providerAwayXG =
+    match.awayTeam?.xG ??
+    match.stats?.expectedGoals?.away ??
+    match.stats?.xG?.away ??
+    match.xG?.away;
+
+  if (
+    typeof providerHomeXG === "number" &&
+    typeof providerAwayXG === "number" &&
+    !isNaN(providerHomeXG) &&
+    !isNaN(providerAwayXG)
+  ) {
+    return {
+      homeXG: parseFloat(providerHomeXG.toFixed(2)),
+      awayXG: parseFloat(providerAwayXG.toFixed(2)),
+      isDemoEstimate: false,
+      source: "provider",
+      label: "Official Tracking",
+    };
+  }
+
+  // 2. If provider does not supply xG, generate a statistical chance-quality model
+  // Scored goals carry ~0.45 chance xG on average, while baseline match flow generates ~0.01 xG/min
+  const elapsed = typeof minute === "number" ? Math.min(90, Math.max(1, minute)) : 90;
+  const matchProgress = elapsed / 90;
+
+  // Open play baseline: ~0.85 home vs ~0.70 away across 90 minutes
+  const baseHomeDanger = 0.85 * matchProgress;
+  const baseAwayDanger = 0.70 * matchProgress;
+
+  const homeGoals = homeScore ?? 0;
+  const awayGoals = awayScore ?? 0;
+
+  const homeXG = parseFloat((baseHomeDanger + homeGoals * 0.45).toFixed(2));
+  const awayXG = parseFloat((baseAwayDanger + awayGoals * 0.45).toFixed(2));
+
+  return {
+    homeXG,
+    awayXG,
+    isDemoEstimate: true,
+    source: "demo_estimate",
+    label: "Demo Estimate",
+  };
+};
+
 const mapMatch = (match) => {
   if (!match) return null;
 
@@ -95,33 +320,13 @@ const mapMatch = (match) => {
       0;
   }
 
-  // xG estimation
-  let homeXG = null;
-  let awayXG = null;
-  if (!isUpcoming && homeScore !== null && awayScore !== null) {
-    const idSeed =
-      typeof match.id === "number" ? match.id : parseInt(match.id, 10) || 1;
-    homeXG = parseFloat(
-      (homeScore * 0.8 + 0.4 + (idSeed % 5) * 0.1).toFixed(2),
-    );
-    awayXG = parseFloat(
-      (awayScore * 0.8 + 0.3 + (idSeed % 3) * 0.1).toFixed(2),
-    );
-  }
+  // Expected goals (xG) resolution: official tracking or clearly labeled demo estimate
+  const xgData = resolveExpectedGoals(match, homeScore, awayScore, isUpcoming, minute);
 
-  // Win probability prediction for upcoming matches
+  // Win probability prediction for upcoming matches: Poisson model or market odds
   let prediction = null;
   if (isUpcoming) {
-    const homeName = match.homeTeam?.shortName || match.homeTeam?.name || "";
-    const awayName = match.awayTeam?.shortName || match.awayTeam?.name || "";
-    const hWeight = ((homeName.charCodeAt(0) || 0) % 50) + 20;
-    const aWeight = ((awayName.charCodeAt(0) || 0) % 40) + 20;
-    const draw = 100 - hWeight - aWeight;
-    prediction = {
-      homeWin: hWeight,
-      draw: draw > 0 ? draw : 20,
-      awayWin: aWeight,
-    };
+    prediction = calculateWinProbabilities(match, match.homeTeam, match.awayTeam);
   }
 
   // Events (if present)
@@ -151,19 +356,30 @@ const mapMatch = (match) => {
       name: match.homeTeam?.shortName || match.homeTeam?.name || "Home Team",
       logo: match.homeTeam?.crest || match.homeTeam?.logo || "",
       score: homeScore,
-      xG: homeXG,
+      xG: xgData.homeXG,
+      isDemoEstimate: xgData.isDemoEstimate,
+      xGSource: xgData.source,
+      xGLabel: xgData.label,
     },
     awayTeam: {
       id: (match.awayTeam?.id || "").toString(),
       name: match.awayTeam?.shortName || match.awayTeam?.name || "Away Team",
       logo: match.awayTeam?.crest || match.awayTeam?.logo || "",
       score: awayScore,
-      xG: awayXG,
+      xG: xgData.awayXG,
+      isDemoEstimate: xgData.isDemoEstimate,
+      xGSource: xgData.source,
+      xGLabel: xgData.label,
     },
     events,
     date: formatMatchDate(match.utcDate),
     timestamp: match.utcDate || "",
     prediction,
+    xGSummary: {
+      isDemoEstimate: xgData.isDemoEstimate,
+      source: xgData.source,
+      label: xgData.label,
+    },
   };
 };
 
