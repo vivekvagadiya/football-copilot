@@ -2,16 +2,20 @@ const notificationService = require("../services/notification.service");
 const apiResponse = require("../utils/apiResponse");
 
 /**
- * Controller: Get all notifications for logged in user
+ * Controller: Get notifications for logged in user with pagination
  */
 const getUserNotificationsController = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const notifications = await notificationService.getUserNotifications(userId);
+    const { page, limit } = req.query;
+    const result = await notificationService.getUserNotifications(userId, {
+      page,
+      limit,
+    });
     return apiResponse.success(
       res,
       "Notifications retrieved successfully",
-      notifications
+      result
     );
   } catch (error) {
     next(error);

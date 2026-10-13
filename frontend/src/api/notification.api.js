@@ -1,8 +1,8 @@
 import axiosInstance from "./axios";
 import endpoints from "./endpoints";
 
-export const getNotificationsApi = async () => {
-  const response = await axiosInstance.get(endpoints.notifications.get);
+export const getNotificationsApi = async (params = {}) => {
+  const response = await axiosInstance.get(endpoints.notifications.get, { params });
   return response.data;
 };
 

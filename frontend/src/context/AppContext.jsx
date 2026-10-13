@@ -109,9 +109,13 @@ export const AppProvider = ({ children }) => {
 
     try {
       const { getNotificationsApi } = await import("../api/notification.api");
-      const res = await getNotificationsApi();
-      if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data.map((n) => ({
+      const res = await getNotificationsApi({ page: 1, limit: 50 });
+      const rawList = Array.isArray(res?.data)
+        ? res.data
+        : (res?.data?.notifications || []);
+
+      if (res?.success && rawList.length >= 0) {
+        const mapped = rawList.map((n) => ({
           id: n._id || n.id,
           title: n.title,
           message: n.message,
@@ -227,8 +231,12 @@ export const AppProvider = ({ children }) => {
 
       const { generateNotificationsApi } = await import("../api/notification.api");
       const res = await generateNotificationsApi();
-      if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data.map((n) => ({
+      const rawList = Array.isArray(res?.data)
+        ? res.data
+        : (res?.data?.notifications || []);
+
+      if (res?.success && rawList.length > 0) {
+        const mapped = rawList.map((n) => ({
           id: n._id || n.id,
           title: n.title,
           message: n.message,
