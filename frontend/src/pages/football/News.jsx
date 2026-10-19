@@ -112,7 +112,7 @@ const NewsCard = ({ item }) => {
 };
 
 export const News = () => {
-  const { data: news = [], isLoading } = useQuery({
+  const { data: rawNews = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['news'],
     queryFn: () => getNewsApi(1)
   });
@@ -120,6 +120,8 @@ export const News = () => {
   if (isLoading) {
     return <Loading text="Syncing news networks..." />;
   }
+
+  const news = Array.isArray(rawNews) ? rawNews : [];
 
   return (
     <div className="space-y-6">
@@ -130,11 +132,28 @@ export const News = () => {
         <p className="text-xs text-muted">Tactical reviews, squad injury logs, and match briefing bulletins.</p>
       </div>
 
-      <div className="space-y-4">
-        {news.map((item) => (
-          <NewsCard key={item.id} item={item} />
-        ))}
-      </div>
+      {isError ? (
+        <Card hover={false} className="text-center py-16 text-muted text-xs border-dashed border-border space-y-3">
+          <Newspaper size={36} className="mx-auto text-muted/50 mb-1" />
+          <p className="font-semibold text-text text-sm">Unable to load news</p>
+          <p>Failed to retrieve intelligence briefs. Please check your connection and try again.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="mx-auto">
+            Try Again
+          </Button>
+        </Card>
+      ) : news.length > 0 ? (
+        <div className="space-y-4">
+          {news.map((item) => (
+            <NewsCard key={item.id} item={item} />
+          ))}
+        </div>
+      ) : (
+        <Card hover={false} className="text-center py-16 text-muted text-xs border-dashed border-border space-y-2">
+          <Newspaper size={36} className="mx-auto text-muted/50 mb-1" />
+          <p className="font-semibold text-text text-sm">No news found</p>
+          <p>There are currently no intelligence briefs or tactical bulletins available.</p>
+        </Card>
+      )}
     </div>
   );
 };

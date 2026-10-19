@@ -23,22 +23,47 @@ const clearUserCache = async (userId) => {
 };
 
 /**
- * Service: Fetch all notifications for a specific user.
+ * Service: Fetch notifications for a specific user with pagination support.
  * @param {string} userId - User MongoDB ObjectId
- * @returns {Promise<Array>} List of notification documents
+ * @param {Object} options - Pagination options { page, limit }
+ * @returns {Promise<Object>} Paginated notifications with metadata
  */
-const getUserNotifications = async (userId) => {
+const getUserNotifications = async (userId, { page = 1, limit = 10 } = {}) => {
   try {
-    let notifications = await Notification.find({ user: userId }).sort({
-      createdAt: -1,
-    });
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    let total = await Notification.countDocuments({ user: userId });
 
     // Seed default initial AI alerts if user has no notifications yet
-    if (notifications.length === 0) {
-      notifications = await generateAINotifications(userId);
+    if (total === 0) {
+      await generateAINotifications(userId);
+      total = await Notification.countDocuments({ user: userId });
     }
 
-    return notifications;
+    const [notifications, unreadCount] = await Promise.all([
+      Notification.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      Notification.countDocuments({ user: userId, read: false }),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 1;
+
+    return {
+      notifications,
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages,
+        unreadCount,
+        hasMore: parsedPage < totalPages,
+      },
+    };
   } catch (error) {
     logger.error(`Error fetching notifications for user ${userId}:`, error);
     throw error;
